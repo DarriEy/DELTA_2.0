@@ -1,0 +1,48 @@
+{
+  "hydrology101": {
+    "title": "Welcome to Hydrology 101!",
+    "overview": "This introductory course will provide you with a foundational understanding of the hydrological cycle, water resources management, and the principles governing water movement and distribution on Earth.",
+    "topics": [
+      {
+        "name": "Introduction to Hydrology",
+        "description": "Basic concepts, the hydrologic cycle, and the importance of water."
+      },
+      {
+        "name": "Precipitation",
+        "description": "Types, measurement, data analysis, and spatial variability."
+      },
+      {
+        "name": "Evaporation and Transpiration",
+        "description": "Processes, influencing factors, estimation, and measurement."
+      },
+      {
+        "name": "Infiltration and Soil Water",
+        "description": "Soil properties, infiltration process, soil moisture, and groundwater recharge."
+      },
+      {
+        "name": "Groundwater Hydrology",
+        "description": "Aquifers, groundwater flow, well hydraulics, and groundwater management."
+      },
+      {
+        "name": "Runoff Processes",
+        "description": "Factors affecting runoff, hydrographs, runoff estimation, and modeling."
+      },
+      {
+        "name": "Streamflow",
+        "description": "Measurement, analysis, flow routing, and flood frequency analysis."
+      },
+      {
+        "name": "Hydrologic Modeling",
+        "description": "Types of models, model calibration, validation, and application."
+      },
+      {
+        "name": "Water Quality",
+        "description": "Introduction to water quality issues, pollutants, and monitoring."
+      },
+      {
+        "name": "Water Resources Management",
+        "description": "Sustainable water use, planning, drought and flood management, and case studies."
+      }
+    ]
+  }
+}

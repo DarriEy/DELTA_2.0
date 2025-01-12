@@ -1,0 +1,6 @@
+{
+    "intro": {
+        "title": "Data Analysis Mode",
+        "overview": "Welcome to the Hydrological Data Analysis Mode! This mode empowers you to explore and analyze hydrological data, gaining valuable insights into water resource patterns and trends. Select a variable from the dropdown menu to get started.\n\nExample: Estimating Average Daily Climate Variables in the Bow at Banff\n\nLet's estimate the average daily temperature and precipitation for the Bow River at Banff. Select the variable from the dropdown menu below and click \"Run Analysis\"."
+    }
+}

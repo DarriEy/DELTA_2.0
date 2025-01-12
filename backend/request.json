@@ -1,0 +1,11 @@
+{
+  "instances": [
+    {
+      "prompt": "A red ball"
+    }
+  ],
+  "parameters": {
+    "sampleCount": 1,
+    "aspectRatio": "3:4"
+  }
+}
