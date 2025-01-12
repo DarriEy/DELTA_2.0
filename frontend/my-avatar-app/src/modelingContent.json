@@ -1,0 +1,6 @@
+{
+  "intro": {
+    "title": "Modeling Mode",
+    "overview": "Welcome to the Hydrological Modeling Mode! This mode empowers you to explore and execute a range of hydrological models using the CONFLUENCE workflow, providing insights into water resource dynamics. Configure and run simulations using established models like SUMMA, FUSE, MESH, and more.\n\nGet started by selecting a model (or \"All of the above\") from the dropdown menu below. Once you're ready, click \"Run Model(s)\" to initiate the simulation."
+  }
+}
