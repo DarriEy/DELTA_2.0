@@ -56,7 +56,7 @@ DELTA's architecture consists of the following key components:
 1.  **Clone the repository:**
 
     ```bash
-    git clone [invalid URL removed]
+    git clone https://github.com/DarriEy/DELTA_2.0
     cd your-repo-name
     ```
 
