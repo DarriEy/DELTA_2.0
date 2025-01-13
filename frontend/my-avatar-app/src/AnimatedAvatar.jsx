@@ -3,6 +3,8 @@ import { generateSpeechFromText, generateImageFromPrompt } from "./services"; //
 import educationalContent from "./educationalContent.json"; // Import educational content
 import modelingContent from "./modelingContent.json";
 import dataAnalysisContent from "./dataAnalysisContent.json";
+import SummaryModal from './summaryModal';
+import { v4 as uuidv4 } from 'uuid';
 
 const AnimatedAvatar = () => {
   const [isNodding, setIsNodding] = useState(false);
@@ -26,9 +28,12 @@ const AnimatedAvatar = () => {
   const [currentEducationalContent, setCurrentEducationalContent] = useState(null);
   const [introductionSpoken, setIntroductionSpoken] = useState(false); // Track if introduction is spoken
   const [currentModelingContent, setCurrentModelingContent] = useState(null);
+  const [showSummaryModal, setShowSummaryModal] = useState(false);
+  const [summaryText, setSummaryText] = useState("");
   const [currentDataAnalysisContent, setCurrentDataAnalysisContent] = useState(null);
   const [backgroundImageModeling, setBackgroundImageModeling] = useState(null);
   const [backgroundImageDataAnalysis, setBackgroundImageDataAnalysis] = useState(null);
+  const [currentConversationId, setCurrentConversationId] = useState(null);
 
   const [isLoading, setIsLoading] = useState(false); // Add a loading state
   const avatarRef = useRef(null);
@@ -96,9 +101,42 @@ const AnimatedAvatar = () => {
     };
   }, []);
 
+// Function to create a new conversation
+const createNewConversation = async (activeMode) => {
+  try {
+    const response = await fetch("http://localhost:8000/api/conversations/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        active_mode: activeMode,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("Detailed error data:", errorData);
+      throw new Error(
+        errorData.detail ||
+          "Failed to create conversation: " + JSON.stringify(errorData)
+      );
+    }
+
+    const data = await response.json();
+    setCurrentConversationId(data.conversation_id); // Set the conversation ID from the response
+    console.log("New conversation created with ID:", data.conversation_id);
+    return data.conversation_id;
+  } catch (error) {
+    console.error("Error creating conversation:", error);
+    alert(error.message);
+    return null;
+  }
+};
+
   const generateGeneralBackgroundImage = async () => {
     const imagePrompt =
-    "Please, render a highly detailed, 4K image of a natural landscape showcasing a: waterfall, river, stream, lake, glacier, or hot spring. The setting should be a breathtaking mountain range or a dense, lush forest. Capture the scene during the magical golden hour or the serene blue hour. Emphasize realistic lighting, textures, and reflections in the water. Style should render with sharp focus and intricate details. Use a 16:9 aspect ratio.";
+    "Please, render a highly detailed, 4K image of a natural landscape showcasing a beautiful hydrological landscape feature. The setting should be a breathtaking natural environment. Capture the scene during the magical golden hour or the serene blue hour. Emphasize realistic lighting, textures, and reflections in the water. Style should render with sharp focus and intricate details. Use a 16:9 aspect ratio.";
     try {
       setIsLoading(true); // Start loading
       const imageUrl = await generateImageFromPrompt(imagePrompt);
@@ -114,6 +152,95 @@ const AnimatedAvatar = () => {
   useEffect(() => {
     generateGeneralBackgroundImage();
   }, []);
+
+// Function to generate the summary (to be implemented in the backend)
+const generateSummary = async (conversationId) => {
+  try {
+    const response = await fetch(`http://localhost:8000/api/summary/${conversationId}`);
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Failed to generate summary");
+    }
+    const data = await response.json();
+    return data.summary;
+  } catch (error) {
+    console.error("Error generating summary:", error);
+    alert(error.message);
+    return null;
+  }
+};
+
+const handleEndOfDay = async () => {
+  if (currentConversationId) {
+    try {
+      const response = await fetch(
+        `http://localhost:8000/api/summary/${currentConversationId}`
+      );
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "Failed to generate summary");
+      }
+      const data = await response.json();
+      setSummaryText(data.summary);
+      setShowSummaryModal(true);
+    } catch (error) {
+      console.error("Error generating summary:", error);
+      alert(error.message);
+    }
+  } else {
+    console.error("No current conversation ID found.");
+    alert("No conversation found to summarize.");
+  }
+};
+
+const handleSummaryConfirm = async (finalSummary) => {
+  console.log("Confirmed summary:", finalSummary);
+  // Here, you can save the final summary to the database or perform other actions
+  try {
+    const now = new Date();
+    const utcNow = new Date(Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate(),
+      now.getUTCHours(),
+      now.getUTCMinutes(),
+      now.getUTCSeconds()
+    ));
+    
+    const response = await fetch(
+      `http://localhost:8000/api/conversations/${currentConversationId}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          summary: finalSummary,
+          end_time: utcNow.toISOString().replace('Z', ''),
+        }),
+      }
+    );
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Failed to save summary");
+    }
+    console.log("Summary saved successfully");
+    // Optionally, display a success message to the user
+    alert("Summary saved successfully!");
+  } catch (error) {
+    console.error("Error saving summary:", error);
+    alert(error.message);
+  }
+
+  setShowSummaryModal(false);
+  // Optionally reset conversation state here
+};
+
+// Function to handle summary cancellation
+const handleSummaryCancel = () => {
+  setShowSummaryModal(false);
+  // Optionally reset any temporary state here
+};
 
   const startListening = () => {
     if (
@@ -190,39 +317,49 @@ const AnimatedAvatar = () => {
       console.warn("Speech recognition result is empty or undefined.");
       return;
     }
-
+  
     setIsListening(false);
     setIsTalking(true);
-    setIsLoading(true); // Start loading
-
+    setIsLoading(true);
+  
     const updatedHistory = [
       ...conversationHistory,
       { role: "user", content: text },
     ];
     setConversationHistory(updatedHistory);
-
+  
     try {
-      let apiEndpoint = showEducationalContent ? "/api/learn" : "/api/process";
-
-      // Check if the last message is from the user
-      if (updatedHistory[updatedHistory.length - 1].role !== "user") {
-        console.error(
-          "Last message in conversation history is not from the user"
-        );
-        alert("Please provide your input.");
-        return;
+      // Create a new conversation if it doesn't exist
+      if (!currentConversationId) {
+        const newConversationId = await createNewConversation(activeMode);
+        if (!newConversationId) {
+          // Handle conversation creation failure
+          console.error("Failed to create a new conversation.");
+          alert("Failed to start a new conversation. Please try again.");
+          return;
+        }
+        setCurrentConversationId(newConversationId);
       }
-
-      const llmResponse = await sendToLLM(updatedHistory, apiEndpoint);
-
-      if (llmResponse) {
-        setConversationHistory([
-          ...updatedHistory,
-          { role: "assistant", content: llmResponse },
-        ]);
-        await speak(llmResponse);
-      } else {
-        console.warn("LLM response was undefined. Skipping speech.");
+  
+      if (currentConversationId) {
+        let apiEndpoint = showEducationalContent
+          ? "/api/learn"
+          : "/api/process";
+        const llmResponse = await sendToLLM(
+          updatedHistory,
+          apiEndpoint,
+          currentConversationId
+        );
+  
+        if (llmResponse) {
+          setConversationHistory((prevHistory) => [
+            ...prevHistory,
+            { role: "assistant", content: llmResponse },
+          ]);
+          await speak(llmResponse);
+        } else {
+          console.warn("LLM response was undefined. Skipping speech.");
+        }
       }
     } catch (error) {
       console.error("Error handling speech recognition result:", error);
@@ -230,13 +367,18 @@ const AnimatedAvatar = () => {
     } finally {
       setIsTalking(false);
       setIsProcessing(false);
-      setIsLoading(false); // End loading
+      setIsLoading(false);
     }
   };
 
-  const sendToLLM = async (conversationHistory, apiEndpoint) => {
+  const sendToLLM = async (
+    conversationHistory,
+    apiEndpoint,
+    conversationId
+  ) => {
     console.log("Conversation history:", conversationHistory);
-
+    console.log("Conversation ID:", conversationId);
+  
     // Ensure the last message is from the user
     const lastMessage = conversationHistory[conversationHistory.length - 1];
     if (!lastMessage || lastMessage.role !== "user") {
@@ -245,15 +387,15 @@ const AnimatedAvatar = () => {
       );
       return;
     }
-
+  
     const userMessage = lastMessage.content;
     console.log("Sending to LLM:", userMessage);
-
+  
     // Retry mechanism with limit
     let retries = 0;
     const maxRetries = 3;
     let fullResponse = "";
-
+  
     while (retries < maxRetries) {
       try {
         const response = await fetch(`http://localhost:8000${apiEndpoint}`, {
@@ -261,27 +403,30 @@ const AnimatedAvatar = () => {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ user_input: userMessage }),
+          body: JSON.stringify({
+            user_input: userMessage,
+            conversation_id: conversationId,
+          }),
         });
-
+  
         console.log("LLM response status:", response.status);
-
+  
         if (!response.ok) {
           console.error("HTTP error! status:", response.status);
           const errorBody = await response.text();
           console.error("Error body:", errorBody);
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-
+  
         const data = await response.json();
         console.log("LLM data:", data);
-
+  
         const assistantResponse = data.llmResponse;
         if (!assistantResponse) {
           console.error("LLM response missing assistant text:", data);
           throw new Error("Assistant response text is missing");
         }
-
+  
         fullResponse = assistantResponse;
         break; // Success, exit the loop
       } catch (error) {
@@ -300,10 +445,38 @@ const AnimatedAvatar = () => {
         await new Promise((resolve) => setTimeout(resolve, 1000));
       }
     }
-
+  
     console.log("Full response from LLM:", fullResponse);
     return fullResponse;
   };
+
+  useEffect(() => {
+    const sendToLLMAfterConversationIdUpdate = async () => {
+      // No need to check currentConversationId here since it is now a dependency
+      // and this useEffect will only run when it is updated
+      if (conversationHistory.length > 0) {
+        let apiEndpoint = showEducationalContent ? "/api/learn" : "/api/process";
+        const llmResponse = await sendToLLM(
+          conversationHistory,
+          apiEndpoint,
+          currentConversationId
+        );
+  
+        if (llmResponse) {
+          setConversationHistory((prevHistory) => [
+            ...prevHistory,
+            { role: "assistant", content: llmResponse },
+          ]);
+          await speak(llmResponse);
+        } else {
+          console.warn("LLM response was undefined. Skipping speech.");
+        }
+      }
+    };
+  
+    sendToLLMAfterConversationIdUpdate();
+  }, [currentConversationId]); // Remove conversationHistory from dependencies
+
 
   const speak = async (text) => {
     try {
@@ -392,7 +565,7 @@ const AnimatedAvatar = () => {
         setCurrentDataAnalysisContent(null);
       } else if (activeMode === "educational") {
         const imagePrompt =
-          "Generate a photorealistic image of a university classroom from the perspective of a student, with a 16:9 aspect ratio and 8K resolution. The main focus is a large, traditional chalkboard or whiteboard on the left, taking up most of the frame, ready for writing and diagrams. The classroom should have a fun, engaging atmosphere. Include various hydrological and geophysical items scattered around, such as a globe, a 3D model of a watershed, a rain gauge, a weather vane, rock samples, and posters of the water cycle and geological formations.  Add some fun, relevant memes related to hydrology and geophysics on the walls or desks. The lighting should be bright and welcoming, typical of an educational setting. The overall style should be realistic and detailed, capturing the essence of a lively and interactive learning environment.";
+          "Please generate a photorealistic image of a university classroom from the perspective of a student, with a 16:9 aspect ratio and 8K resolution. The main focus is a large, traditional chalkboard or whiteboard on the left, taking up most of the frame, ready for writing and diagrams. The classroom should have a fun, engaging atmosphere. Include various hydrological and geophysical items scattered around, such as a globe, a 3D model of a watershed, a rain gauge, a weather vane, rock samples, and posters of the water cycle and geological formations.  Add some fun, relevant memes related to hydrology and geophysics on the walls or desks. The lighting should be bright and welcoming, typical of an educational setting. The overall style should be realistic and detailed, capturing the essence of a lively and interactive learning environment.";
         try {
           setIsLoading(true);
           const imageUrl = await generateImageFromPrompt(imagePrompt);
@@ -409,7 +582,7 @@ const AnimatedAvatar = () => {
         }
       } else if (activeMode === "modeling") {
         const imagePrompt =
-          "Create a photorealistic image of the interior of an advanced hydrological monitoring space, rendered in 8K resolution with a 16:9 aspect ratio. The environment should evoke the feeling of being in a futuristic spaceship cockpit, without explicitly showing any spaceship elements.  Design the space with sleek, curved consoles, and large, high-resolution screens displaying complex hydrological models, real-time data streams, and dynamic 3D visualizations of water flow. Incorporate holographic projections of watersheds and river basins. The lighting should be a mix of soft, ambient glows from the screens and subtle, strategic accent lighting along the consoles. The overall atmosphere should be high-tech, immersive, and focused, as if in a command center for monitoring and analyzing complex environmental systems.";
+          "Please create a photorealistic image of the interior of an advanced hydrological monitoring space, rendered in 8K resolution with a 16:9 aspect ratio. The environment should evoke the feeling of being in a futuristic spaceship cockpit, without explicitly showing any spaceship elements.  Design the space with sleek, curved consoles, and large, high-resolution screens displaying complex hydrological models, real-time data streams, and dynamic 3D visualizations of water flow. Incorporate holographic projections of watersheds and river basins. The lighting should be a mix of soft, ambient glows from the screens and subtle, strategic accent lighting along the consoles. The overall atmosphere should be high-tech, immersive, and focused, as if in a command center for monitoring and analyzing complex environmental systems.";
         try {
           setIsLoading(true);
           const imageUrl = await generateImageFromPrompt(imagePrompt);
@@ -424,7 +597,7 @@ const AnimatedAvatar = () => {
         }
       } else if (activeMode === "dataAnalysis") {
         const imagePrompt =
-          "Generate a photorealistic, top-down view of a modern, hydrological data analysis idea board, 8K resolution. The central element is a large, empty canvas, ready for drawing and visualizations. Populate the board with various measurement tools and objects, such as digital calipers, rulers, protractors, data loggers, sensor readouts, and perhaps a disassembled flow meter. Include schematic diagrams of hydrological systems, printed charts of water levels and flow rates, and a scattering of writing utensils like pens, markers, and highlighters.  Arrange these elements as if on a large, well-lit worktable. The overall style should be highly detailed and realistic, as if captured by an overhead camera in a professional workspace. Use a 16:9 aspect ratio.";
+          "Please generate a photorealistic, top-down view of a modern, hydrological data analysis idea board, 8K resolution. The central element is a large, empty canvas, ready for drawing and visualizations. Populate the board with various measurement tools and objects, such as digital calipers, rulers, protractors, data loggers, sensor readouts, and perhaps a disassembled flow meter. Include schematic diagrams of hydrological systems, printed charts of water levels and flow rates, and a scattering of writing utensils like pens, markers, and highlighters.  Arrange these elements as if on a large, well-lit worktable. The overall style should be highly detailed and realistic, as if captured by an overhead camera in a professional workspace. Use a 16:9 aspect ratio.";
         try {
           setIsLoading(true);
           const imageUrl = await generateImageFromPrompt(imagePrompt);
@@ -541,7 +714,14 @@ const AnimatedAvatar = () => {
             ? "Back to General"
             : "Data Analysis Mode"}
         </button>
-            </div>
+
+        <button 
+        onClick={handleEndOfDay} 
+        className="ml-2 px-4 py-2 rounded bg-orange-500 text-white"
+        >
+        End of Day
+         </button>
+        </div>
 
       <div
         className={`relative mt-20 avatar-container ${
@@ -581,7 +761,13 @@ const AnimatedAvatar = () => {
         </div>
       </div>
 
-      
+      {showSummaryModal && (
+  <SummaryModal
+    summary={summaryText}
+    onConfirm={handleSummaryConfirm}
+    onCancel={handleSummaryCancel}
+  />
+)}
 
 {/* Content Frame */}
 {(activeMode === "educational" ||

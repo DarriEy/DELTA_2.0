@@ -224,3 +224,33 @@ async def generate_response(user_input: str, role: str = "DELTA"):
     
     else:
         raise ValueError(f"Unknown role: {role}")
+    
+async def generate_summary_from_messages(messages):
+    """Generates a summary from a list of messages."""
+    try:
+        # Format messages for LLM prompt
+        formatted_messages = "\n".join(
+            f"{msg['sender']}: {msg['content']}" for msg in messages
+        )
+
+        # Construct the summarization prompt
+        prompt = f"Please provide a concise summary of the following conversation:\n\n{formatted_messages}\n\nSummary:"
+
+        print(f"Sending summarization request to LLM")
+        print(f"Prompt: {prompt}")
+
+        response = client.messages.create(
+            model=config["LLM_MODEL"],
+            max_tokens=512,  # Adjust as needed for summary length
+            system=DELTA_SYSTEM_PROMPT,
+            messages=[
+                {"role": "user", "content": prompt},
+            ],
+        )
+        print(f"LLM response: {response}")
+
+        return response.content[0].text
+
+    except AnthropicError as e:
+        print(f"Error generating summary from LLM: {e}")
+        return "Sorry, I encountered an error while generating the summary."

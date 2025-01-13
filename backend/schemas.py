@@ -52,6 +52,11 @@ class ModelConfigBase(BaseModel):
     model_name: str
     config_data: dict
 
+class ConversationUpdate(BaseModel):
+    summary: Optional[str] = None
+    end_time: Optional[datetime] = None
+    active_mode: Optional[str] = None
+
 class ModelConfigCreate(ModelConfigBase):
     pass
 

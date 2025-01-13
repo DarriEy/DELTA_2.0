@@ -9,16 +9,19 @@ from models import create_tables, User, Conversation, Message, ModelConfig, Mode
 
 app = FastAPI(title="DELTA Orchestrator")
 
-# Allow CORS for your frontend's origin
+# Configure CORS
+origins = [
+    "http://localhost:5173",  # Add your frontend's origin here
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # Replace with your frontend's actual origin if it's different
+    allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],  # Allow all HTTP methods
+    allow_headers=["*"],  # Allow all headers
 )
 
-# Include API routes
 app.include_router(api_router)
 
 @app.on_event("startup")
@@ -32,6 +35,10 @@ async def startup_event():
 @app.on_event("shutdown")
 async def shutdown_event():
     await app.state.httpx_client.aclose()
+
+@app.get("/")
+async def root():
+    return {"message": "DELTA Backend Started"}
 
 if __name__ == "__main__":
     import uvicorn
