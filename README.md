@@ -5,9 +5,9 @@
 
 ## Overview
 
-DELTA (Descriptive এখানকার নাম দিন) is an innovative AI-powered research assistant designed to facilitate hydrological modeling, data analysis, and education. It leverages state-of-the-art technologies, including a conversational AI avatar, large language models (LLMs), and a comprehensive hydrological modeling framework to provide a user-friendly and interactive experience for researchers, students, and professionals in the field of hydrology.
+DELTA (Deliberatly Expert Liquid Topography Expert) is an innovative AI-powered research assistant designed to facilitate hydrological modeling, data analysis, and education. It leverages state-of-the-art technologies, including a conversational AI avatar, large language models (LLMs), and a comprehensive hydrological modeling framework to provide a user-friendly and interactive experience for researchers, students, and professionals in the field of hydrology.
 
-DELTA offers a multi-modal interface, allowing users to interact with the system through text and voice commands. It features an animated avatar that provides visual feedback and enhances user engagement. The system is built upon a robust architecture that integrates a React frontend, a FastAPI backend, and various external APIs for natural language processing, text-to-speech, and image generation.
+DELTA features an animated avatar that provides visual feedback and enhances user engagement. The system is built upon a robust architecture that integrates a React frontend, a FastAPI backend, and various external APIs for natural language processing, text-to-speech, and image generation.
 
 ## Features
 
@@ -57,7 +57,7 @@ DELTA's architecture consists of the following key components:
 
     ```bash
     git clone https://github.com/DarriEy/DELTA_2.0
-    cd your-repo-name
+    cd DELTA_2.0
     ```
 
 2.  **Frontend Setup:**

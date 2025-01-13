@@ -4,6 +4,8 @@ from api.routes import router as api_router
 from utils.config import config
 from fastapi.middleware.cors import CORSMiddleware  # Import CORSMiddleware
 import httpx
+from models import create_tables, User, Conversation, Message, ModelConfig, ModelRun, EducationalProgress, get_db, engine
+
 
 app = FastAPI(title="DELTA Orchestrator")
 
@@ -23,6 +25,9 @@ app.include_router(api_router)
 async def startup_event():
     app.state.httpx_client = httpx.AsyncClient()
     print("DELTA Backend Started")
+
+    # Create tables if they don't exist
+    await create_tables()
 
 @app.on_event("shutdown")
 async def shutdown_event():
