@@ -9,8 +9,7 @@ from sqlalchemy import (
     Boolean,
 )
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import sessionmaker, relationship
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, relationship, declarative_base
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.sql import func
 from dotenv import load_dotenv
@@ -19,9 +18,14 @@ import os
 load_dotenv()
 DATABASE_URL = f"postgresql+asyncpg://delta_user:{os.environ.get('DELTA_DB_PASSWORD')}@localhost/delta_db"
 
+# Use declarative_base() to create the base class
 Base = declarative_base()
 
 engine = create_async_engine(DATABASE_URL, echo=False)  # Set echo=True for debugging SQL
+
+# Create a session factory
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, class_=AsyncSession, expire_on_commit=False)
+
 async_session = sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
 
 
@@ -47,8 +51,9 @@ class Conversation(Base):
     conversation_id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.user_id"))
     start_time = Column(TIMESTAMP, server_default=func.now())
-    end_time = Column(TIMESTAMP)  # Consider adding server_default=func.now() if needed
+    end_time = Column(TIMESTAMP)
     active_mode = Column(String)
+    summary = Column(String, nullable=True)
 
     user = relationship("User", back_populates="conversations")
     messages = relationship("Message", back_populates="conversation")

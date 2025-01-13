@@ -1,34 +1,102 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Body
 from .llm_integration import generate_response, generate_image
-from .schemas import UserInput, ImagePrompt
+from .schemas import UserInput, ImagePrompt, ConversationCreate
 import yaml
+import json
 import asyncpg
 import subprocess
 from sqlalchemy.future import select
-from sqlalchemy import update
+from sqlalchemy import update, func
 from sqlalchemy.ext.asyncio import AsyncSession
-from schemas import UserCreate, User, ConversationCreate, Conversation, MessageCreate, Message, ModelConfigCreate, ModelConfig, ModelRunCreate, ModelRun, EducationalProgressCreate, EducationalProgress
-from models import User as DBUser, Conversation as DBConversation, Message as DBMessage, ModelConfig as DBModelConfig, ModelRun as DBModelRun, EducationalProgress as DBEducationalProgress, get_db, engine
+from schemas import UserCreate, User, ConversationCreate, Conversation, MessageCreate, Message, ModelConfigCreate, ModelConfig, ModelRunCreate, ModelRun, EducationalProgressCreate, EducationalProgress, ConversationUpdate
+from models import User as DBUser, Conversation as DBConversation, Message as DBMessage, ModelConfig as DBModelConfig, ModelRun as DBModelRun, EducationalProgress as DBEducationalProgress, get_db, engine, SessionLocal
+from .llm_integration import (
+    generate_response,
+    generate_image,
+    generate_summary_from_messages,
+)
 import bcrypt
 from typing import List  # Import List from typing
 from sqlalchemy.exc import IntegrityError
 
+from sqlalchemy.orm import scoped_session
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine
+from dotenv import load_dotenv
+
 router = APIRouter()
 
-@router.post("/api/process")
-async def process_input(user_input: UserInput):
-    try:
-        llm_response = await generate_response(user_input.user_input)
-        return {"llmResponse": llm_response}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+async def create_message_in_db(db, content, sender, conversation_id, message_index):
+    """Helper function to create a message in the database."""
+    db_message = DBMessage(
+        content=content,
+        sender=sender,
+        conversation_id=conversation_id,
+        message_index=message_index
+    )
+    db.add(db_message)
+    await db.commit()
+    await db.refresh(db_message)
+    return db_message
 
-@router.post("/api/learn")
-async def learn_input(user_input: UserInput):
+@router.post("/api/process")
+async def process_input(user_input: str = Body(...), conversation_id: int = Body(...), db: AsyncSession = Depends(get_db)):
     try:
-        llm_response = await generate_response(user_input.user_input, "EDUCATIONAL_GUIDE")
+        # Get the conversation from the database
+        result = await db.execute(select(DBConversation).where(DBConversation.conversation_id == conversation_id))
+        conversation = result.scalars().first()
+
+        if not conversation:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+
+        # Fetch the last message index for this conversation
+        result = await db.execute(
+            select(func.max(DBMessage.message_index)).where(DBMessage.conversation_id == conversation_id)
+        )
+        last_message_index = result.scalar() or 0
+
+        # Create a new message entry in the database for the user input
+        await create_message_in_db(db, user_input, "user", conversation_id, last_message_index + 1)
+
+        # Generate LLM response
+        llm_response = await generate_response(user_input)
+
+        # Create a new message entry in the database for the LLM response
+        await create_message_in_db(db, llm_response, "assistant", conversation_id, last_message_index + 2)
+
         return {"llmResponse": llm_response}
     except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+        
+@router.post("/api/learn")
+async def learn_input(user_input: str = Body(...), conversation_id: int = Body(...), db: AsyncSession = Depends(get_db)):
+    try:
+        # Get the conversation from the database
+        result = await db.execute(select(DBConversation).where(DBConversation.conversation_id == conversation_id))
+        conversation = result.scalars().first()
+
+        if not conversation:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+
+        # Fetch the last message index for this conversation
+        result = await db.execute(
+            select(func.max(DBMessage.message_index)).where(DBMessage.conversation_id == conversation_id)
+        )
+        last_message_index = result.scalar() or 0
+
+        # Create a new message entry in the database for the user input
+        await create_message_in_db(db, user_input, "user", conversation_id, last_message_index + 1)
+
+        # Generate LLM response
+        llm_response = await generate_response(user_input, "EDUCATIONAL_GUIDE")
+
+        # Create a new message entry in the database for the LLM response
+        await create_message_in_db(db, llm_response, "assistant", conversation_id, last_message_index + 2)
+
+        return {"llmResponse": llm_response}
+    except Exception as e:
+        await db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/api/generate_image")
@@ -109,30 +177,28 @@ async def create_user(user: UserCreate, db: AsyncSession = Depends(get_db)):
             raise HTTPException(status_code=500, detail=f"Internal server error: {e}") # Raise inside async with block
 
 
+# Dependency to get the database session
+async def get_db():
+    async with SessionLocal() as session:
+        yield session
+
 @router.post("/api/conversations/", response_model=Conversation)
 async def create_conversation(conversation: ConversationCreate, db: AsyncSession = Depends(get_db)):
     print("Received conversation data:", conversation)
+    print("Conversation as dict:", conversation.dict())
     try:
-        # Correctly create the DBConversation object
-        db_conversation = DBConversation(
-            user_id=conversation.user_id,
-            active_mode=conversation.active_mode
-        )
-        print("Creating DBConversation object:", db_conversation)
-
-        # Add the new object to the session
-        db.add(db_conversation)
-
-        # Commit the transaction to save the object to the database
-        await db.commit()
-
-        # Refresh the object to get any generated values (like the ID)
-        await db.refresh(db_conversation)
-
-        # Return the newly created conversation
-        return db_conversation
+        async with db.begin():
+            db_conversation = DBConversation(**conversation.dict())
+            db_conversation.user_id = 1  # Set a user_id temporarily
+            print("Creating DBConversation object:", db_conversation)
+            db.add(db_conversation)
+            await db.flush()
+            await db.refresh(db_conversation)
+            print("Conversation object after refresh:", db_conversation)
+            await db.commit()
+            return db_conversation
     except Exception as e:
-        # If an error occurs, print it and raise an HTTPException
+        await db.rollback()
         print(f"Error creating conversation: {e}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
 
@@ -161,7 +227,7 @@ async def get_messages(conversation_id: int, db: AsyncSession = Depends(get_db))
         return messages
 
 @router.put("/api/conversations/{conversation_id}", response_model=Conversation)
-async def update_conversation(conversation_id: int, conversation_update: ConversationCreate, db: AsyncSession = Depends(get_db)):
+async def update_conversation(conversation_id: int, conversation_update: ConversationUpdate, db: AsyncSession = Depends(get_db)):
     async with db.begin():
         # Fetch the existing conversation
         conversation = await db.get(DBConversation, conversation_id)
@@ -169,10 +235,102 @@ async def update_conversation(conversation_id: int, conversation_update: Convers
             raise HTTPException(status_code=404, detail="Conversation not found")
 
         # Update the conversation fields
-        for key, value in conversation_update.dict(exclude_unset=True).items():
+        update_data = conversation_update.dict(exclude_unset=True)
+        for key, value in update_data.items():
             setattr(conversation, key, value)
 
-        # Commit the changes and refresh the object
+        # Refresh and then commit the changes
+        await db.refresh(conversation)  # Refresh happens *before* commit
         await db.commit()
-        await db.refresh(conversation)
         return conversation
+    
+@router.get("/api/summary/{conversation_id}")
+async def get_summary(conversation_id: int, db: AsyncSession = Depends(get_db)):
+    async with db.begin():
+        # Fetch conversation messages
+        result = await db.execute(
+            select(DBMessage)
+            .where(DBMessage.conversation_id == conversation_id)
+            .order_by(DBMessage.message_index)
+        )
+        messages = result.scalars().all()
+
+        if not messages:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+
+        # Format messages for LLM prompt
+        formatted_messages = [
+            {"role": msg.sender, "content": msg.content} for msg in messages
+        ]
+
+        # Generate summary using LLM
+        try:
+            summary = await generate_response(
+                f"Summarize the following conversation: {json.dumps(formatted_messages)}"
+            )
+            return {"summary": summary}
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error generating summary: {e}",
+            )
+        
+@router.get("/api/summary/{conversation_id}")
+async def get_summary(conversation_id: int, db: AsyncSession = Depends(get_db)):
+    async with db.begin():
+        # Fetch conversation messages
+        result = await db.execute(
+            select(DBMessage)
+            .where(DBMessage.conversation_id == conversation_id)
+            .order_by(DBMessage.message_index)
+        )
+        messages = result.scalars().all()
+
+        if not messages:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+
+        # Format messages for LLM prompt
+        formatted_messages = [
+            {"role": msg.sender, "content": msg.content} for msg in messages
+        ]
+
+        # Generate summary using LLM
+        try:
+            summary = await generate_response(
+                f"Summarize the following conversation: {json.dumps(formatted_messages)}"
+            )
+            return {"summary": summary}
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error generating summary: {e}",
+            )
+        
+@router.get("/api/summary/{conversation_id}")
+async def get_summary(conversation_id: int, db: AsyncSession = Depends(get_db)):
+    async with db.begin():
+        # Fetch conversation messages
+        result = await db.execute(
+            select(DBMessage)
+            .where(DBMessage.conversation_id == conversation_id)
+            .order_by(DBMessage.message_index)
+        )
+        messages = result.scalars().all()
+
+        if not messages:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+
+        # Convert messages to a simpler format
+        formatted_messages = [
+            {"sender": msg.sender, "content": msg.content} for msg in messages
+        ]
+
+        # Generate summary using the dedicated function
+        try:
+            summary = await generate_summary_from_messages(formatted_messages)
+            return {"summary": summary}
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error generating summary: {e}",
+            )

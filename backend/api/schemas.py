@@ -24,16 +24,24 @@ class ConversationBase(BaseModel):
     
 
 class ConversationCreate(ConversationBase):
-    user_id: int  # Add user_id here
+    active_mode: str
+    user_id: int
 
 class Conversation(ConversationBase):
     conversation_id: int
     user_id: int
     start_time: datetime
     end_time: Optional[datetime]
+    summary: Optional[str] = None # Add this line
+    
 
     class Config:
         from_attributes = True
+
+class ConversationUpdate(BaseModel):
+    summary: Optional[str] = None
+    end_time: Optional[datetime] = None
+    active_mode: Optional[str] = None
 
 # Message Models (You were missing these)
 class MessageBase(BaseModel):
