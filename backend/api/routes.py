@@ -1,8 +1,17 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from .llm_integration import generate_response, generate_image
 from .schemas import UserInput, ImagePrompt
 import yaml
+import asyncpg
 import subprocess
+from sqlalchemy.future import select
+from sqlalchemy import update
+from sqlalchemy.ext.asyncio import AsyncSession
+from schemas import UserCreate, User, ConversationCreate, Conversation, MessageCreate, Message, ModelConfigCreate, ModelConfig, ModelRunCreate, ModelRun, EducationalProgressCreate, EducationalProgress
+from models import User as DBUser, Conversation as DBConversation, Message as DBMessage, ModelConfig as DBModelConfig, ModelRun as DBModelRun, EducationalProgress as DBEducationalProgress, get_db, engine
+import bcrypt
+from typing import List  # Import List from typing
+from sqlalchemy.exc import IntegrityError
 
 router = APIRouter()
 
@@ -71,3 +80,99 @@ async def run_confluence(input_data: dict):
         return {"message": "CONFLUENCE run started", "output": process.stdout}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+@router.post("/api/users/", response_model=User)
+async def create_user(user: UserCreate, db: AsyncSession = Depends(get_db)):
+    async with db.begin():
+        # Check if a user with the given email already exists
+        result = await db.execute(select(DBUser).where(DBUser.email == user.email))
+        existing_user = result.scalars().first()
+
+        if existing_user:
+            raise HTTPException(status_code=409, detail="Email already exists")
+
+        # If the user doesn't exist, proceed with creation
+        hashed_password = bcrypt.hashpw(
+            user.password.encode("utf-8"), bcrypt.gensalt()
+        ).decode("utf-8")
+        db_user = DBUser(
+            username=user.username, email=user.email, password_hash=hashed_password
+        )
+        db.add(db_user)
+        try:
+            await db.commit()
+            await db.refresh(db_user)  # Inside async with and try block
+            return db_user
+        except Exception as e:  # Catch general exception
+            await db.rollback()
+            print(f"Error creating user: {e}")  # Log the error
+            raise HTTPException(status_code=500, detail=f"Internal server error: {e}") # Raise inside async with block
+
+
+@router.post("/api/conversations/", response_model=Conversation)
+async def create_conversation(conversation: ConversationCreate, db: AsyncSession = Depends(get_db)):
+    print("Received conversation data:", conversation)
+    try:
+        # Correctly create the DBConversation object
+        db_conversation = DBConversation(
+            user_id=conversation.user_id,
+            active_mode=conversation.active_mode
+        )
+        print("Creating DBConversation object:", db_conversation)
+
+        # Add the new object to the session
+        db.add(db_conversation)
+
+        # Commit the transaction to save the object to the database
+        await db.commit()
+
+        # Refresh the object to get any generated values (like the ID)
+        await db.refresh(db_conversation)
+
+        # Return the newly created conversation
+        return db_conversation
+    except Exception as e:
+        # If an error occurs, print it and raise an HTTPException
+        print(f"Error creating conversation: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
+
+
+@router.get("/api/conversations/{user_id}", response_model=List[Conversation])
+async def get_conversations(user_id: int, db: AsyncSession = Depends(get_db)):
+    async with db.begin():
+        result = await db.execute(select(DBConversation).where(DBConversation.user_id == user_id))
+        conversations = result.scalars().all()
+        return conversations
+
+@router.post("/api/messages/", response_model=Message)
+async def create_message(message: MessageCreate, conversation_id: int, db: AsyncSession = Depends(get_db)):
+    async with db.begin():
+        db_message = DBMessage(**message.dict(), conversation_id=conversation_id)
+        db.add(db_message)
+        await db.commit()
+        await db.refresh(db_message)
+        return db_message
+
+@router.get("/api/messages/{conversation_id}", response_model=List[Message])
+async def get_messages(conversation_id: int, db: AsyncSession = Depends(get_db)):
+    async with db.begin():
+        result = await db.execute(select(DBMessage).where(DBMessage.conversation_id == conversation_id).order_by(DBMessage.message_index))
+        messages = result.scalars().all()
+        return messages
+
+@router.put("/api/conversations/{conversation_id}", response_model=Conversation)
+async def update_conversation(conversation_id: int, conversation_update: ConversationCreate, db: AsyncSession = Depends(get_db)):
+    async with db.begin():
+        # Fetch the existing conversation
+        conversation = await db.get(DBConversation, conversation_id)
+        if conversation is None:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+
+        # Update the conversation fields
+        for key, value in conversation_update.dict(exclude_unset=True).items():
+            setattr(conversation, key, value)
+
+        # Commit the changes and refresh the object
+        await db.commit()
+        await db.refresh(conversation)
+        return conversation

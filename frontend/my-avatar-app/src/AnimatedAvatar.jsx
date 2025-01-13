@@ -98,7 +98,7 @@ const AnimatedAvatar = () => {
 
   const generateGeneralBackgroundImage = async () => {
     const imagePrompt =
-      "A photorealistic serene landscape with prominent water features, such as a calm lake, meandering river, and a natural spring, all depicted in a photorealistic style under a clear sky.";
+    "Please, render a highly detailed, 4K image of a natural landscape showcasing a: waterfall, river, stream, lake, glacier, or hot spring. The setting should be a breathtaking mountain range or a dense, lush forest. Capture the scene during the magical golden hour or the serene blue hour. Emphasize realistic lighting, textures, and reflections in the water. Style should render with sharp focus and intricate details. Use a 16:9 aspect ratio.";
     try {
       setIsLoading(true); // Start loading
       const imageUrl = await generateImageFromPrompt(imagePrompt);
@@ -351,30 +351,13 @@ const AnimatedAvatar = () => {
   const handleDataAnalysisMode = async () => {
     setShowDataAnalysisContent(!showDataAnalysisContent);
     setActiveMode(showDataAnalysisContent ? "general" : "dataAnalysis");
-    setShowContentFrame(true);
+    setShowContentFrame(!showDataAnalysisContent);
 
-    if (!showDataAnalysisContent) {
-      const imagePrompt =
-        "A modern data analysis workspace with multiple screens displaying hydrological data, statistical analysis, and interactive charts.";
-      try {
-        setIsLoading(true);
-        const imageUrl = await generateImageFromPrompt(imagePrompt);
-        setBackgroundImageDataAnalysis(imageUrl);
-        setCurrentDataAnalysisContent(dataAnalysisContent.intro); // Use your data analysis content
-      } catch (error) {
-        console.error("Error generating image or fetching content:", error);
-        alert(
-          "Failed to initialize data analysis mode. Please try again later."
-        );
-      } finally {
-        setIsLoading(false);
-      }
-    } else {
-      setBackgroundImageDataAnalysis(null);
-      setCurrentDataAnalysisContent(null);
-      setShowContentFrame(false);
+    if (showDataAnalysisContent) {
+        setBackgroundImageDataAnalysis(null);
+        setCurrentDataAnalysisContent(null);
     }
-  };
+};
 
   const handleVariableSelection = (event) => {
     setSelectedVariable(event.target.value);
@@ -409,7 +392,7 @@ const AnimatedAvatar = () => {
         setCurrentDataAnalysisContent(null);
       } else if (activeMode === "educational") {
         const imagePrompt =
-          "A large empty whiteboard to the left, and a world map in the upper right";
+          "Generate a photorealistic image of a university classroom from the perspective of a student, with a 16:9 aspect ratio and 8K resolution. The main focus is a large, traditional chalkboard or whiteboard on the left, taking up most of the frame, ready for writing and diagrams. The classroom should have a fun, engaging atmosphere. Include various hydrological and geophysical items scattered around, such as a globe, a 3D model of a watershed, a rain gauge, a weather vane, rock samples, and posters of the water cycle and geological formations.  Add some fun, relevant memes related to hydrology and geophysics on the walls or desks. The lighting should be bright and welcoming, typical of an educational setting. The overall style should be realistic and detailed, capturing the essence of a lively and interactive learning environment.";
         try {
           setIsLoading(true);
           const imageUrl = await generateImageFromPrompt(imagePrompt);
@@ -426,7 +409,7 @@ const AnimatedAvatar = () => {
         }
       } else if (activeMode === "modeling") {
         const imagePrompt =
-          "A collage of hydrological models, featuring charts, graphs, and 3D representations of water flow and distribution.";
+          "Create a photorealistic image of the interior of an advanced hydrological monitoring space, rendered in 8K resolution with a 16:9 aspect ratio. The environment should evoke the feeling of being in a futuristic spaceship cockpit, without explicitly showing any spaceship elements.  Design the space with sleek, curved consoles, and large, high-resolution screens displaying complex hydrological models, real-time data streams, and dynamic 3D visualizations of water flow. Incorporate holographic projections of watersheds and river basins. The lighting should be a mix of soft, ambient glows from the screens and subtle, strategic accent lighting along the consoles. The overall atmosphere should be high-tech, immersive, and focused, as if in a command center for monitoring and analyzing complex environmental systems.";
         try {
           setIsLoading(true);
           const imageUrl = await generateImageFromPrompt(imagePrompt);
@@ -441,7 +424,7 @@ const AnimatedAvatar = () => {
         }
       } else if (activeMode === "dataAnalysis") {
         const imagePrompt =
-          "A modern data analysis workspace with multiple screens displaying hydrological data, statistical analysis, and interactive charts.";
+          "Generate a photorealistic, top-down view of a modern, hydrological data analysis idea board, 8K resolution. The central element is a large, empty canvas, ready for drawing and visualizations. Populate the board with various measurement tools and objects, such as digital calipers, rulers, protractors, data loggers, sensor readouts, and perhaps a disassembled flow meter. Include schematic diagrams of hydrological systems, printed charts of water levels and flow rates, and a scattering of writing utensils like pens, markers, and highlighters.  Arrange these elements as if on a large, well-lit worktable. The overall style should be highly detailed and realistic, as if captured by an overhead camera in a professional workspace. Use a 16:9 aspect ratio.";
         try {
           setIsLoading(true);
           const imageUrl = await generateImageFromPrompt(imagePrompt);

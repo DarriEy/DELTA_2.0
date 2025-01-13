@@ -1,9 +1,8 @@
 # backend/schemas.py
-from pydantic import BaseModel, Field, EmailStr  # Remove the type: ignore comment
+from pydantic import BaseModel, EmailStr
 from typing import List, Optional
 from datetime import datetime
 
-# Define UserBase first
 class UserBase(BaseModel):
     username: str
     email: EmailStr
@@ -16,15 +15,13 @@ class User(UserBase):
     registration_date: datetime
 
     class Config:
-        from_attributes = True
+        orm_mode = True
 
-# Conversation Models
 class ConversationBase(BaseModel):
     active_mode: str
-    
 
 class ConversationCreate(ConversationBase):
-    user_id: int  # Add user_id here
+    pass
 
 class Conversation(ConversationBase):
     conversation_id: int
@@ -33,9 +30,8 @@ class Conversation(ConversationBase):
     end_time: Optional[datetime]
 
     class Config:
-        from_attributes = True
+        orm_mode = True
 
-# Message Models (You were missing these)
 class MessageBase(BaseModel):
     content: str
     sender: str
@@ -49,12 +45,11 @@ class Message(MessageBase):
     timestamp: datetime
 
     class Config:
-        from_attributes = True
+        orm_mode = True
 
-# Model Configuration Models (Assuming you need these)
 class ModelConfigBase(BaseModel):
     config_name: str
-    model_type: str  # Renamed from model_name
+    model_name: str
     config_data: dict
 
 class ModelConfigCreate(ModelConfigBase):
@@ -66,15 +61,14 @@ class ModelConfig(ModelConfigBase):
     creation_time: datetime
 
     class Config:
-        from_attributes = True
+        orm_mode = True
 
-# Model Run Models (Assuming you need these)
 class ModelRunBase(BaseModel):
     status: str
     output_path: Optional[str]
 
 class ModelRunCreate(ModelRunBase):
-    config_id: int
+    config_id : int
 
 class ModelRun(ModelRunBase):
     run_id: int
@@ -82,9 +76,8 @@ class ModelRun(ModelRunBase):
     end_time: Optional[datetime]
 
     class Config:
-        from_attributes = True
+        orm_mode = True
 
-# Educational Progress Models (Assuming you need these)
 class EducationalProgressBase(BaseModel):
     topic_name: str
     completion_status: bool
@@ -99,18 +92,4 @@ class EducationalProgress(EducationalProgressBase):
     last_accessed: datetime
 
     class Config:
-        from_attributes = True
-
-# Other Models
-class UserInput(BaseModel):
-    user_input: str
-
-class ImagePrompt(BaseModel):
-    prompt: str = Field(
-        description="The text prompt for image generation", min_length=5, max_length=1000
-    )
-
-# Consider moving this to a separate module or routes.py if it's only used there
-class RunConfluenceInput(BaseModel):
-    model: str
-    configPath: str
+        orm_mode = True
