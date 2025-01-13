@@ -493,27 +493,56 @@ const AnimatedAvatar = () => {
   }, [isTalking]);
 
   return (
-    <div
-      className="flex flex-col items-center justify-start h-screen p-4 relative bg-cover bg-center fullscreen-bg"
-      style={{
-        backgroundImage:
-          activeMode === "educational"
-            ? backgroundImageUrl
-              ? `url(${backgroundImageUrl})`
-              : "none"
+    <div className="min-h-screen w-full overflow-hidden">
+      <div 
+        className="fixed inset-0 w-full h-full bg-cover bg-center bg-no-repeat"
+        style={{
+          backgroundImage: activeMode === "educational"
+            ? `url(${backgroundImageUrl})`
             : activeMode === "modeling"
-            ? backgroundImageModeling
-              ? `url(${backgroundImageModeling})`
-              : "none"
+            ? `url(${backgroundImageModeling})`
             : activeMode === "dataAnalysis"
-            ? backgroundImageDataAnalysis
-              ? `url(${backgroundImageDataAnalysis})`
-              : "none"
+            ? `url(${backgroundImageDataAnalysis})`
             : generalBackgroundImageUrl
             ? `url(${generalBackgroundImageUrl})`
             : "none",
-      }}
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'
+        }}
     >
+              {/* Overlay to ensure content is visible */}
+              <div className="absolute inset-0 bg-black bg-opacity-30">
+          {/* Content container */}
+          <div className="relative min-h-screen w-full flex flex-col items-center justify-start p-4">
+
+          <div className="button-container absolute top-4 left-4">
+
+        {/* Mode Buttons */}
+        <button
+          onClick={handleEducationalMode}
+          className="ml-2 px-4 py-2 rounded bg-green-500 text-white"
+        >
+          {activeMode === "educational"
+            ? "Back to General"
+            : "Educational Mode"}
+        </button>
+        <button
+          onClick={handleModelingMode}
+          className="ml-2 px-4 py-2 rounded bg-blue-500 text-white"
+        >
+          {activeMode === "modeling" ? "Back to General" : "Modeling Mode"}
+        </button>
+        <button
+          onClick={handleDataAnalysisMode}
+          className="ml-2 px-4 py-2 rounded bg-purple-500 text-white"
+        >
+          {activeMode === "dataAnalysis"
+            ? "Back to General"
+            : "Data Analysis Mode"}
+        </button>
+            </div>
+
       <div
         className={`relative mt-20 avatar-container ${
           activeMode !== "general" ? "mode-change" : ""
@@ -552,31 +581,7 @@ const AnimatedAvatar = () => {
         </div>
       </div>
 
-      <div className="mt-4 button-container absolute top-4 left-4">
-        {/* Mode Buttons */}
-        <button
-          onClick={handleEducationalMode}
-          className="ml-2 px-4 py-2 rounded bg-green-500 text-white"
-        >
-          {activeMode === "educational"
-            ? "Back to General"
-            : "Educational Mode"}
-        </button>
-        <button
-          onClick={handleModelingMode}
-          className="ml-2 px-4 py-2 rounded bg-blue-500 text-white"
-        >
-          {activeMode === "modeling" ? "Back to General" : "Modeling Mode"}
-        </button>
-        <button
-          onClick={handleDataAnalysisMode}
-          className="ml-2 px-4 py-2 rounded bg-purple-500 text-white"
-        >
-          {activeMode === "dataAnalysis"
-            ? "Back to General"
-            : "Data Analysis Mode"}
-        </button>
-      </div>
+      
 
 {/* Content Frame */}
 {(activeMode === "educational" ||
@@ -656,6 +661,9 @@ const AnimatedAvatar = () => {
           )}
         </div>
       )}
+          </div>
+          </div>
+    </div>
     </div>
   );
 };
