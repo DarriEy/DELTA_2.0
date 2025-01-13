@@ -333,23 +333,19 @@ button:focus-visible {
   margin-bottom: 10px;
 }
 .content-frame {
-    display: flex;
-    flex-direction: column;
-    position: absolute;
-    top: 50%;
-    left: 15%;
-    transform: translate(-50%, -50%);
-    width: 60%; /* Adjust width as needed */
-    max-height: 80%; /* Adjust height as needed */
-    background-color: rgba(255, 255, 255, 0.95); /* More opaque white background */
-    border: 2px solid #ccc;
-    z-index: 5;
-    overflow-y: auto;
-    padding: 30px; /* Increased padding */
-    font-size: 16px; /* Slightly larger font size */
-    line-height: 1.6; /* Increased line height */
-    position: relative;
-  }
+  position: absolute;
+  top: 50%;
+  left: 5%;
+  transform: translate(0, -50%);
+  width: 600px; /* Adjust width as necessary */
+  max-height: 90%; /* Optional: limit the height */
+  background-color: rgba(255, 255, 255, 0.95); /* Background color */
+  border-radius: 5px; /* Optional: rounded corners */
+  padding: 20px; /* Adjust padding as necessary */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); /* Optional: add a shadow */
+  z-index: 10; /* Make sure it appears above other elements */
+  overflow-y: auto; /* Scrollable if content overflows */
+}
 
 .content-frame h2 {
     font-size: 24px; /* Larger heading size */

@@ -50,16 +50,15 @@ async def generate_image(prompt: str) -> str:
         }
 
         data = {
-            "instances": [
-                {
-                    "prompt": prompt,
-                    "aspectRatio": "16:9"  # Add this line
-                }
-            ],
-            "parameters": {
-                "sampleCount": 1,
-                "aspect_ratio": "16:9"  # Add this line
-            },
+        "instances": [
+            {
+            "prompt": prompt,
+            }
+        ],
+        "parameters": {
+            "aspectRatio": "16:9",  
+            "sampleCount": 1,
+        },
         }
 
 
