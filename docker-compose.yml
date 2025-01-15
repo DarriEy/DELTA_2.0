@@ -1,0 +1,55 @@
+services:
+  db:
+    image: postgres:latest
+    ports:
+      - "6432:5432"
+    environment:
+      - POSTGRES_USER=delta_user
+      - POSTGRES_PASSWORD=TAA36LZgspcQM.8
+      - POSTGRES_DB=delta_db
+      - POSTGRES_HOST_AUTH_METHOD=md5 # Use md5 for better security
+      - PGPORT=5432
+      - PGMAXCONN=100
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - delta-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U delta_user -d delta_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://delta_user:TAA36LZgspcQM.8@db:5432/delta_db
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/google-credentials.json
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - delta-network
+    env_file:
+      - ./backend/.env
+    # Use wait-for-it.sh in your entrypoint or command
+    command: /app/start.sh
+
+  frontend:
+    build:
+      context: ./frontend/my-avatar-app
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    networks:
+      - delta-network
+    environment:
+      - VITE_APP_API_BASE_URL=http://localhost:8000
+
+volumes:
+  db-data:
+networks:
+  delta-network:
+    driver: bridge

@@ -1,5 +1,4 @@
 from fastapi import APIRouter, HTTPException, Depends, Body
-from .llm_integration import generate_response, generate_image
 from .schemas import UserInput, ImagePrompt, ConversationCreate
 import yaml
 import json
@@ -8,8 +7,8 @@ import subprocess
 from sqlalchemy.future import select
 from sqlalchemy import update, func
 from sqlalchemy.ext.asyncio import AsyncSession
-from schemas import UserCreate, User, ConversationCreate, Conversation, MessageCreate, Message, ModelConfigCreate, ModelConfig, ModelRunCreate, ModelRun, EducationalProgressCreate, EducationalProgress, ConversationUpdate
-from models import User as DBUser, Conversation as DBConversation, Message as DBMessage, ModelConfig as DBModelConfig, ModelRun as DBModelRun, EducationalProgress as DBEducationalProgress, get_db, engine, SessionLocal
+from .schemas import UserCreate, User, ConversationCreate, Conversation, MessageCreate, Message, ModelConfigCreate, ModelConfig, ModelRunCreate, ModelRun, EducationalProgressCreate, EducationalProgress, ConversationUpdate
+from .models import User as DBUser, Conversation as DBConversation, Message as DBMessage, ModelConfig as DBModelConfig, ModelRun as DBModelRun, EducationalProgress as DBEducationalProgress, get_db, engine, SessionLocal
 from .llm_integration import (
     generate_response,
     generate_image,
@@ -23,6 +22,10 @@ from sqlalchemy.orm import scoped_session
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 from dotenv import load_dotenv
+
+import logging
+
+log = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -41,8 +44,10 @@ async def create_message_in_db(db, content, sender, conversation_id, message_ind
 
 @router.post("/api/process")
 async def process_input(user_input: str = Body(...), conversation_id: int = Body(...), db: AsyncSession = Depends(get_db)):
+    log.info(f"Processing input: {user_input} for conversation: {conversation_id}")
     try:
         # Get the conversation from the database
+        
         result = await db.execute(select(DBConversation).where(DBConversation.conversation_id == conversation_id))
         conversation = result.scalars().first()
 
@@ -66,6 +71,7 @@ async def process_input(user_input: str = Body(...), conversation_id: int = Body
 
         return {"llmResponse": llm_response}
     except Exception as e:
+        log.error(f"Error in process_input: {e}") # Log any errors
         await db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
         
@@ -99,7 +105,7 @@ async def learn_input(user_input: str = Body(...), conversation_id: int = Body(.
         await db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/api/generate_image")
+@router.post("/api/generate_image/")
 async def generate_image_route(prompt_data: ImagePrompt):
     try:
         data_uri = await generate_image(prompt_data.prompt)
@@ -334,3 +340,7 @@ async def get_summary(conversation_id: int, db: AsyncSession = Depends(get_db)):
                 status_code=500,
                 detail=f"Error generating summary: {e}",
             )
+        
+@router.get("/api/health")
+async def health_check():
+    return {"status": "ok"}

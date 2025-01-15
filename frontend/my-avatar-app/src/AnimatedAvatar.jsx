@@ -34,6 +34,8 @@ const AnimatedAvatar = () => {
   const [backgroundImageModeling, setBackgroundImageModeling] = useState(null);
   const [backgroundImageDataAnalysis, setBackgroundImageDataAnalysis] = useState(null);
   const [currentConversationId, setCurrentConversationId] = useState(null);
+  const API_BASE_URL = import.meta.env.VITE_APP_API_BASE_URL || 'http://localhost:8000';
+  console.log("API_BASE_URL in AnimatedAvatar:", API_BASE_URL); // Add this line
 
   const [isLoading, setIsLoading] = useState(false); // Add a loading state
   const avatarRef = useRef(null);
@@ -104,50 +106,51 @@ const AnimatedAvatar = () => {
 // Function to create a new conversation
 const createNewConversation = async (activeMode) => {
   try {
-    const response = await fetch("http://localhost:8000/api/conversations/", {
+      const response = await fetch(`${API_BASE_URL}/api/conversations/`, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
+          "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        active_mode: activeMode,
+          active_mode: activeMode,
       }),
-    });
+      });
 
-    if (!response.ok) {
+      if (!response.ok) {
       const errorData = await response.json();
       console.error("Detailed error data:", errorData);
       throw new Error(
-        errorData.detail ||
+          errorData.detail ||
           "Failed to create conversation: " + JSON.stringify(errorData)
       );
-    }
+      }
 
-    const data = await response.json();
-    setCurrentConversationId(data.conversation_id); // Set the conversation ID from the response
-    console.log("New conversation created with ID:", data.conversation_id);
-    return data.conversation_id;
+      const data = await response.json();
+      setCurrentConversationId(data.conversation_id); // Set the conversation ID from the response
+      console.log("New conversation created with ID:", data.conversation_id);
+      return data.conversation_id;
   } catch (error) {
-    console.error("Error creating conversation:", error);
-    alert(error.message);
-    return null;
+      console.error("Error creating conversation:", error);
+      alert(error.message);
+      return null;
   }
 };
 
-  const generateGeneralBackgroundImage = async () => {
-    const imagePrompt =
-    "Please, render a highly detailed, 4K image of a natural landscape showcasing a beautiful hydrological landscape feature. The setting should be a breathtaking natural environment. Capture the scene during the magical golden hour or the serene blue hour. Emphasize realistic lighting, textures, and reflections in the water. Style should render with sharp focus and intricate details. Use a 16:9 aspect ratio.";
-    try {
-      setIsLoading(true); // Start loading
-      const imageUrl = await generateImageFromPrompt(imagePrompt);
-      setGeneralBackgroundImageUrl(imageUrl);
-    } catch (error) {
-      console.error("Error generating general background image:", error);
-      alert("Failed to generate background image. Please try again later.");
-    } finally {
-      setIsLoading(false); // End loading
-    }
-  };
+const generateGeneralBackgroundImage = async () => {
+  await new Promise((resolve) => setTimeout(resolve, 3000));
+  const imagePrompt =
+  "Please, render a highly detailed, 4K image of a natural landscape showcasing a beautiful hydrological landscape feature. The setting should be a breathtaking natural environment. Capture the scene during the magical golden hour or the serene blue hour. Emphasize realistic lighting, textures, and reflections in the water. Style should render with sharp focus and intricate details. Use a 16:9 aspect ratio.";
+  try {
+  setIsLoading(true); // Start loading
+  const imageUrl = await generateImageFromPrompt(imagePrompt);
+  setGeneralBackgroundImageUrl(imageUrl);
+  } catch (error) {
+  console.error("Error generating general background image:", error);
+  alert("Failed to generate background image. Please try again later.");
+  } finally {
+  setIsLoading(false); // End loading
+  }
+};
 
   useEffect(() => {
     generateGeneralBackgroundImage();
@@ -156,7 +159,7 @@ const createNewConversation = async (activeMode) => {
 // Function to generate the summary (to be implemented in the backend)
 const generateSummary = async (conversationId) => {
   try {
-    const response = await fetch(`http://localhost:8000/api/summary/${conversationId}`);
+    const response = await fetch(`${API_BASE_URL}/api/summary/${conversationId}`);
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.detail || "Failed to generate summary");
@@ -172,24 +175,24 @@ const generateSummary = async (conversationId) => {
 
 const handleEndOfDay = async () => {
   if (currentConversationId) {
-    try {
+  try {
       const response = await fetch(
-        `http://localhost:8000/api/summary/${currentConversationId}`
+      `<span class="math-inline">\{API\_BASE\_URL\}/api/summary/</span>{currentConversationId}/`
       );
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || "Failed to generate summary");
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Failed to generate summary");
       }
       const data = await response.json();
       setSummaryText(data.summary);
       setShowSummaryModal(true);
-    } catch (error) {
+  } catch (error) {
       console.error("Error generating summary:", error);
       alert(error.message);
-    }
+  }
   } else {
-    console.error("No current conversation ID found.");
-    alert("No conversation found to summarize.");
+  console.error("No current conversation ID found.");
+  alert("No conversation found to summarize.");
   }
 };
 
@@ -197,39 +200,39 @@ const handleSummaryConfirm = async (finalSummary) => {
   console.log("Confirmed summary:", finalSummary);
   // Here, you can save the final summary to the database or perform other actions
   try {
-    const now = new Date();
-    const utcNow = new Date(Date.UTC(
+  const now = new Date();
+  const utcNow = new Date(Date.UTC(
       now.getUTCFullYear(),
       now.getUTCMonth(),
       now.getUTCDate(),
       now.getUTCHours(),
       now.getUTCMinutes(),
       now.getUTCSeconds()
-    ));
-    
-    const response = await fetch(
-      `http://localhost:8000/api/conversations/${currentConversationId}`,
+  ));
+  
+  const response = await fetch(
+      `<span class="math-inline">\{API\_BASE\_URL\}/api/conversations/</span>{currentConversationId}/`,
       {
-        method: "PUT",
-        headers: {
+      method: "PUT",
+      headers: {
           "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+      },
+      body: JSON.stringify({
           summary: finalSummary,
           end_time: utcNow.toISOString().replace('Z', ''),
-        }),
+      }),
       }
-    );
-    if (!response.ok) {
+  );
+  if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.detail || "Failed to save summary");
-    }
-    console.log("Summary saved successfully");
-    // Optionally, display a success message to the user
-    alert("Summary saved successfully!");
+  }
+  console.log("Summary saved successfully");
+  // Optionally, display a success message to the user
+  alert("Summary saved successfully!");
   } catch (error) {
-    console.error("Error saving summary:", error);
-    alert(error.message);
+  console.error("Error saving summary:", error);
+  alert(error.message);
   }
 
   setShowSummaryModal(false);
@@ -241,6 +244,7 @@ const handleSummaryCancel = () => {
   setShowSummaryModal(false);
   // Optionally reset any temporary state here
 };
+
 
   const startListening = () => {
     if (
@@ -278,39 +282,40 @@ const handleSummaryCancel = () => {
 
     // Prepare the model setting for the API request
     const modelSetting = selectedModel === "All of the above"
-      ? "FUSE,GR,FLASH,SUMMA,HYPE,MESH"
-      : selectedModel;
+    ? "FUSE,GR,FLASH,SUMMA,HYPE,MESH"
+    : selectedModel;
 
     try {
-      // Make an API request to the backend to run CONFLUENCE
-      const response = await fetch("http://localhost:8000/api/run_confluence", {
+    // Make an API request to the backend to run CONFLUENCE
+    const response = await fetch(`${API_BASE_URL}/api/run_confluence`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
+        "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: modelSetting,
-          configPath: "/Users/darrieythorsson/compHydro/code/DELTA/backend/examples/config_Bow.yaml", // Update with your actual path
+        model: modelSetting,
+        configPath: "/Users/darrieythorsson/compHydro/code/DELTA/backend/examples/config_Bow.yaml", // Update with your actual path
         }),
-      });
+    });
 
-      if (!response.ok) {
+    if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.detail || "Failed to run CONFLUENCE");
-      }
-
-      const result = await response.json();
-      console.log("CONFLUENCE run result:", result);
-
-      // Handle the result, e.g., update state to show output or redirect to a results page
-      alert(`Model(s) ${selectedModel} run completed.`);
-    } catch (error) {
-      console.error("Error running CONFLUENCE:", error);
-      alert(error.message);
-    } finally {
-      setIsLoading(false);
     }
-  };
+
+    const result = await response.json();
+    console.log("CONFLUENCE run result:", result);
+
+    // Handle the result, e.g., update state to show output or redirect to a results page
+    alert(`Model(s) ${selectedModel} run completed.`);
+    } catch (error) {
+    console.error("Error running CONFLUENCE:", error);
+    alert(error.message);
+    } finally {
+    setIsLoading(false);
+    }
+};
+
 
   const handleSpeechRecognitionResult = async (text) => {
     if (!text) {
@@ -340,16 +345,24 @@ const handleSummaryCancel = () => {
         }
         setCurrentConversationId(newConversationId);
       }
-  
+
       if (currentConversationId) {
+        // Update conversation history
+        setConversationHistory((prevHistory) => [
+          ...prevHistory,
+          { role: "user", content: text },
+        ]);
+
+        // Send to LLM after updating history
         let apiEndpoint = showEducationalContent
-          ? "/api/learn"
-          : "/api/process";
+          ? "/api/learn/"
+          : "/api/process/";
         const llmResponse = await sendToLLM(
-          updatedHistory,
+          [...conversationHistory, { role: "user", content: text }], // Pass updated history
           apiEndpoint,
           currentConversationId
         );
+
   
         if (llmResponse) {
           setConversationHistory((prevHistory) => [
@@ -396,9 +409,9 @@ const handleSummaryCancel = () => {
     const maxRetries = 3;
     let fullResponse = "";
   
-    while (retries < maxRetries) {
+   while (retries < maxRetries) {
       try {
-        const response = await fetch(`http://localhost:8000${apiEndpoint}`, {
+        const response = await fetch(`${API_BASE_URL}${apiEndpoint}`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

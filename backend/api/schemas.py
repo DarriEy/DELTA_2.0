@@ -1,9 +1,8 @@
 # backend/schemas.py
-from pydantic import BaseModel, Field, EmailStr  # Remove the type: ignore comment
+from pydantic import BaseModel, EmailStr, Field
 from typing import List, Optional
 from datetime import datetime
 
-# Define UserBase first
 class UserBase(BaseModel):
     username: str
     email: EmailStr
@@ -16,34 +15,31 @@ class User(UserBase):
     registration_date: datetime
 
     class Config:
-        from_attributes = True
+        orm_mode = True
 
-# Conversation Models
+class UserInput(BaseModel):
+    user_input: str
+
 class ConversationBase(BaseModel):
     active_mode: str
-    
+
+class ImagePrompt(BaseModel):
+    prompt: str = Field(
+        description="The text prompt for image generation", min_length=5, max_length=1000
+    )
 
 class ConversationCreate(ConversationBase):
-    active_mode: str
-    user_id: int
+    pass
 
 class Conversation(ConversationBase):
     conversation_id: int
     user_id: int
     start_time: datetime
     end_time: Optional[datetime]
-    summary: Optional[str] = None # Add this line
-    
 
     class Config:
-        from_attributes = True
+        orm_mode = True
 
-class ConversationUpdate(BaseModel):
-    summary: Optional[str] = None
-    end_time: Optional[datetime] = None
-    active_mode: Optional[str] = None
-
-# Message Models (You were missing these)
 class MessageBase(BaseModel):
     content: str
     sender: str
@@ -57,13 +53,18 @@ class Message(MessageBase):
     timestamp: datetime
 
     class Config:
-        from_attributes = True
+        orm_mode = True
 
-# Model Configuration Models (Assuming you need these)
 class ModelConfigBase(BaseModel):
     config_name: str
-    model_type: str  # Renamed from model_name
+    model_name: str
     config_data: dict
+    model_config = {'protected_namespaces': ()}
+
+class ConversationUpdate(BaseModel):
+    summary: Optional[str] = None
+    end_time: Optional[datetime] = None
+    active_mode: Optional[str] = None
 
 class ModelConfigCreate(ModelConfigBase):
     pass
@@ -74,15 +75,14 @@ class ModelConfig(ModelConfigBase):
     creation_time: datetime
 
     class Config:
-        from_attributes = True
+        orm_mode = True
 
-# Model Run Models (Assuming you need these)
 class ModelRunBase(BaseModel):
     status: str
     output_path: Optional[str]
 
 class ModelRunCreate(ModelRunBase):
-    config_id: int
+    config_id : int
 
 class ModelRun(ModelRunBase):
     run_id: int
@@ -90,9 +90,8 @@ class ModelRun(ModelRunBase):
     end_time: Optional[datetime]
 
     class Config:
-        from_attributes = True
+        orm_mode = True
 
-# Educational Progress Models (Assuming you need these)
 class EducationalProgressBase(BaseModel):
     topic_name: str
     completion_status: bool
@@ -107,16 +106,8 @@ class EducationalProgress(EducationalProgressBase):
     last_accessed: datetime
 
     class Config:
-        from_attributes = True
+        orm_mode = True
 
-# Other Models
-class UserInput(BaseModel):
-    user_input: str
-
-class ImagePrompt(BaseModel):
-    prompt: str = Field(
-        description="The text prompt for image generation", min_length=5, max_length=1000
-    )
 
 # Consider moving this to a separate module or routes.py if it's only used there
 class RunConfluenceInput(BaseModel):

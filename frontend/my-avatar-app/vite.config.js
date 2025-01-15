@@ -5,9 +5,22 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   server: {
+    host: true, // Allow external access to the dev server
     port: 5173, // Specify the port you want Vite to use
     hmr: {
       overlay: true, // Ensure HMR overlay is enabled
+    },
+  },
+  // add the base option to the build configuration
+  build: {
+    outDir: 'dist',
+    assetsDir: 'assets',
+    sourcemap: true,
+    base: '',
+    rollupOptions: {
+      output: {
+        manualChunks: undefined,
+      },
     },
   },
 });
