@@ -195,7 +195,7 @@ async def create_conversation(conversation: ConversationCreate, db: AsyncSession
     try:
         async with db.begin():
             db_conversation = DBConversation(**conversation.dict())
-            db_conversation.user_id = 1  # Set a user_id temporarily
+            # db_conversation.user_id = 1  # Remove this line if you added it back 
             print("Creating DBConversation object:", db_conversation)
             db.add(db_conversation)
             await db.flush()

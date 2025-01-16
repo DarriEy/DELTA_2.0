@@ -103,17 +103,18 @@ const AnimatedAvatar = () => {
     };
   }, []);
 
-// Function to create a new conversation
-const createNewConversation = async (activeMode) => {
-  try {
+  const createNewConversation = async (activeMode) => {
+    try {
+      const userId = 1; // Replace with actual user ID
       const response = await fetch(`${API_BASE_URL}/api/conversations/`, {
-      method: "POST",
-      headers: {
+        method: "POST",
+        headers: {
           "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+        },
+        body: JSON.stringify({
           active_mode: activeMode,
-      }),
+          user_id: userId, // Include user_id in the request body
+        }),
       });
 
       if (!response.ok) {
@@ -139,7 +140,7 @@ const createNewConversation = async (activeMode) => {
 const generateGeneralBackgroundImage = async () => {
   await new Promise((resolve) => setTimeout(resolve, 3000));
   const imagePrompt =
-  "Please, render a highly detailed, 4K image of a natural landscape showcasing a beautiful hydrological landscape feature. The setting should be a breathtaking natural environment. Capture the scene during the magical golden hour or the serene blue hour. Emphasize realistic lighting, textures, and reflections in the water. Style should render with sharp focus and intricate details. Use a 16:9 aspect ratio.";
+  "Please, render a highly detailed photorealistic yet otherworldly, 4K image of a natural landscape showcasing a beautiful hydrological landscape feature. The setting should be a breathtaking natural environment. Emphasize realistic lighting, textures, and reflections in the water. Style should render with sharp focus and intricate details. Use a 16:9 aspect ratio.";
   try {
   setIsLoading(true); // Start loading
   const imageUrl = await generateImageFromPrompt(imagePrompt);
@@ -175,64 +176,84 @@ const generateSummary = async (conversationId) => {
 
 const handleEndOfDay = async () => {
   if (currentConversationId) {
-  try {
-      const response = await fetch(
-      `<span class="math-inline">\{API\_BASE\_URL\}/api/summary/</span>{currentConversationId}/`
-      );
-      if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || "Failed to generate summary");
+      try {
+          console.log("Request Headers:", {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+          });
+          console.log("Current conversation ID:", currentConversationId);
+
+          const response = await fetch(
+              `${API_BASE_URL}/api/summary/${currentConversationId}/`,
+              {
+                  method: "GET", // Ensure method is GET
+                  headers: {
+                      "Content-Type": "application/json",
+                      Accept: "application/json",
+                  },
+              }
+          );
+
+          if (!response.ok) {
+              const errorData = await response.text(); // Try to get text for non-JSON responses
+              console.error("Detailed error data:", errorData);
+              throw new Error(
+                  `Failed to generate summary: ${response.status} ${response.statusText}`
+              );
+          }
+
+          const data = await response.json();
+          setSummaryText(data.summary);
+          setShowSummaryModal(true);
+      } catch (error) {
+          console.error("Error generating summary:", error);
+          alert(error.message);
       }
-      const data = await response.json();
-      setSummaryText(data.summary);
-      setShowSummaryModal(true);
-  } catch (error) {
-      console.error("Error generating summary:", error);
-      alert(error.message);
-  }
   } else {
-  console.error("No current conversation ID found.");
-  alert("No conversation found to summarize.");
+      console.error("No current conversation ID found.");
+      alert("No conversation found to summarize.");
   }
-};
+};  
 
 const handleSummaryConfirm = async (finalSummary) => {
   console.log("Confirmed summary:", finalSummary);
   // Here, you can save the final summary to the database or perform other actions
   try {
-  const now = new Date();
-  const utcNow = new Date(Date.UTC(
-      now.getUTCFullYear(),
-      now.getUTCMonth(),
-      now.getUTCDate(),
-      now.getUTCHours(),
-      now.getUTCMinutes(),
-      now.getUTCSeconds()
-  ));
-  
-  const response = await fetch(
-      `<span class="math-inline">\{API\_BASE\_URL\}/api/conversations/</span>{currentConversationId}/`,
+    const now = new Date();
+    const utcNow = new Date(
+      Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        now.getUTCDate(),
+        now.getUTCHours(),
+        now.getUTCMinutes(),
+        now.getUTCSeconds()
+      )
+    );
+
+    const response = await fetch(
+      `${API_BASE_URL}/api/conversations/${currentConversationId}/`, // Correct template literal
       {
-      method: "PUT",
-      headers: {
+        method: "PUT",
+        headers: {
           "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+        },
+        body: JSON.stringify({
           summary: finalSummary,
           end_time: utcNow.toISOString().replace('Z', ''),
-      }),
+        }),
       }
-  );
-  if (!response.ok) {
+    );
+    if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.detail || "Failed to save summary");
-  }
-  console.log("Summary saved successfully");
-  // Optionally, display a success message to the user
-  alert("Summary saved successfully!");
+    }
+    console.log("Summary saved successfully");
+    // Optionally, display a success message to the user
+    alert("Summary saved successfully!");
   } catch (error) {
-  console.error("Error saving summary:", error);
-  alert(error.message);
+    console.error("Error saving summary:", error);
+    alert(error.message);
   }
 
   setShowSummaryModal(false);
@@ -336,7 +357,8 @@ const handleSummaryCancel = () => {
     try {
       // Create a new conversation if it doesn't exist
       if (!currentConversationId) {
-        const newConversationId = await createNewConversation(activeMode);
+        const userId = 1;
+        const newConversationId = await createNewConversation(activeMode, userId);
         if (!newConversationId) {
           // Handle conversation creation failure
           console.error("Failed to create a new conversation.");

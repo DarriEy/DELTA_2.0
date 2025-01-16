@@ -29,7 +29,7 @@ class ImagePrompt(BaseModel):
     )
 
 class ConversationCreate(ConversationBase):
-    pass
+    user_id: Optional[int] = None
 
 class Conversation(ConversationBase):
     conversation_id: int

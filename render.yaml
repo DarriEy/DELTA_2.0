@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: delta-containerized
+    env: docker
+    dockerfilePath: ./Dockerfile # Path to your Dockerfile if not in root
+    buildCommand: docker compose build
+    startCommand: docker compose up

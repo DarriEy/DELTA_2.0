@@ -50,7 +50,7 @@ class Conversation(Base):
     __tablename__ = "conversations"
 
     conversation_id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.user_id"))
+    user_id = Column(Integer, ForeignKey("users.user_id"), nullable=True)
     start_time = Column(TIMESTAMP, server_default=func.now())
     end_time = Column(TIMESTAMP)
     active_mode = Column(String)
