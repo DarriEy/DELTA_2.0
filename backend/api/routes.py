@@ -237,7 +237,7 @@ def create_conversation(
         print("Creating DBConversation object:", db_conversation)
         db.add(db_conversation)
         db.flush()
-        db.refresh(db_conversation)
+        #db.refresh(db_conversation)
         print("Conversation object after refresh:", db_conversation)
         db.commit()
         return db_conversation
