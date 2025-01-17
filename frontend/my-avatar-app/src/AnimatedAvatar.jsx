@@ -34,7 +34,7 @@ const AnimatedAvatar = () => {
   const [backgroundImageModeling, setBackgroundImageModeling] = useState(null);
   const [backgroundImageDataAnalysis, setBackgroundImageDataAnalysis] = useState(null);
   const [currentConversationId, setCurrentConversationId] = useState(null);
-  const API_BASE_URL = import.meta.env.VITE_APP_API_BASE_URL || 'http://localhost:8000';
+  const API_BASE_URL = import.meta.env.VITE_APP_API_BASE_URL || 'https://delta-h-7344a1b27b42.herokuapp.com';
   console.log("API_BASE_URL in AnimatedAvatar:", API_BASE_URL); // Add this line
 
   const [isLoading, setIsLoading] = useState(false); // Add a loading state

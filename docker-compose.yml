@@ -1,57 +1,43 @@
 services:
-  db:
-    image: postgres:latest
-    ports:
-      - "6432:5432"
-    environment:
-      - POSTGRES_USER=delta_user
-      - POSTGRES_PASSWORD=TAA36LZgspcQM.8
-      - POSTGRES_DB=delta_db
-      - POSTGRES_HOST_AUTH_METHOD=md5 # Use md5 for better security
-      - PGPORT=5432
-      - PGMAXCONN=100
-    volumes:
-      - db-data:/var/lib/postgresql/data
-    networks:
-      - delta-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U delta_user -d delta_db"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-      
   backend:
-    build: ./backend
+    image: registry.heroku.com/delta-h/web
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      args:
+        - BUILDKIT_INLINE_CACHE=1
     ports:
-      - "8000:8000"
+      - "${PORT}:8000"  # Use Heroku's PORT environment variable
     environment:
-      - DATABASE_URL=postgresql+asyncpg://delta_user:TAA36LZgspcQM.8@db:5432/delta_db
+      - DATABASE_URL=${DATABASE_URL}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - GOOGLE_APPLICATION_CREDENTIALS=/app/google-credentials.json
-    depends_on:
-      db:
-        condition: service_healthy
+      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
+      - CONFIG_FILE_PATH=${CONFIG_FILE_PATH}
+      - PROJECT_ID=${PROJECT_ID}
+      - LOCATION=${LOCATION}
     networks:
       - delta-network
     env_file:
+      - .env
       - ./backend/.env
-    # Use wait-for-it.sh in your entrypoint or command
     command: /app/start.sh
 
   frontend:
+    image: registry.heroku.com/delta-h-frontend/web  # New registry URL
     build:
-      context: ./frontend/my-avatar-app
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: frontend/my-avatar-app/Dockerfile
+      args:
+        - BUILDKIT_INLINE_CACHE=1
     ports:
-      - "5173:5173"
+      - "${PORT}:80"  # Use Heroku's PORT environment variable
     networks:
       - delta-network
     environment:
-      - VITE_APP_API_BASE_URL=http://localhost:8000
+      - VITE_APP_API_BASE_URL=https://delta-h.herokuapp.com  # Point to backend URL
+    env_file:
+      - .env
 
-volumes:
-  db-data:
 networks:
   delta-network:
     driver: bridge
-

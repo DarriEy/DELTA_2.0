@@ -1,6 +1,6 @@
-const API_BASE_URL = import.meta.env.VITE_APP_API_BASE_URL || 'http://localhost:8000';
+const API_BASE_URL = 'https://delta-h-7344a1b27b42.herokuapp.com' //import.meta.env.VITE_APP_API_BASE_URL;
 
-console.log('API_BASE_URL in services:', API_BASE_URL); // Add this for debugging
+console.log("API_BASE_URL in services:", API_BASE_URL);
 
 // services.js
 export const generateSpeechFromText = async (text) => {
@@ -31,12 +31,14 @@ export const generateSpeechFromText = async (text) => {
 
 export const generateImageFromPrompt = async (prompt) => {
   try {
+    if (!API_BASE_URL) {
+      throw new Error("API_BASE_URL is not defined!");
+    }
+
     console.log("Sending prompt to backend:", prompt);
-    // Remove any trailing slashes from the base URL
-    const baseUrl = API_BASE_URL.replace(/\/+$/, '');
-    const url = `${baseUrl}/api/generate_image/`;
-    console.log("Making request to:", url); // Add this for debugging
-    
+    const url = `${API_BASE_URL}/api/generate_image/`;
+    console.log("Making request to:", url);
+
     const response = await fetch(url, {
       method: "POST",
       headers: {
@@ -49,9 +51,11 @@ export const generateImageFromPrompt = async (prompt) => {
       const data = await response.json();
       return data.image_url;
     } else {
-      const errorData = await response.json();
-      console.error("Failed to generate image:", errorData.detail);
-      throw new Error(`Failed to generate image: ${errorData.detail}`);
+      const errorData = await response.text(); // Try to get text response
+      console.error("Failed to generate image:", errorData);
+      throw new Error(
+        `Failed to generate image: ${errorData || response.statusText}`
+      );
     }
   } catch (error) {
     console.error("Error generating image:", error);

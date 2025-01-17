@@ -3,12 +3,11 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "scripts": {
-    "dev": "vite",
+"scripts": {
+    "dev": "vite --host",
     "build": "vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
-  },
+    "serve": "vite preview --port $PORT --host --strictPort"
+},
   "dependencies": {
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

@@ -1,23 +1,29 @@
-# Use an official Node.js runtime as the base image
+# Use an official Node runtime as a parent image
 FROM node:lts-alpine
 
-# Set the working directory in the container
+# Set the working directory to /app
 WORKDIR /app
 
-# Copy package.json and package-lock.json into the container
-COPY package*.json ./
+# Copy the package.json and package-lock.json files to the working directory
+COPY frontend/my-avatar-app/package*.json ./
 
-# Install project dependencies
+# Install the app dependencies
 RUN npm install
 
-# Copy the application code into the container
-COPY . .
+# Copy the rest of the app's source code to the working directory
+COPY frontend/my-avatar-app /app/
 
-# Build the production version of the app
+# Build the app for production
 RUN npm run build
 
-# Expose the port your app runs on
-EXPOSE 5173
+# Copy package.json and package-lock.json for production dependencies
+COPY frontend/my-avatar-app/package*.json ./
 
-# Define the command to run your app using the development server
-CMD ["npm", "run", "dev", "--", "--port", "5173", "--host"]
+# Install only production dependencies
+RUN npm install --only=production
+
+# Define the port that the app will run on
+ENV PORT=80
+
+# Start the app using the serve script
+CMD ["npm", "run", "serve"]
