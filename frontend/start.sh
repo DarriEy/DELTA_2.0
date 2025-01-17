@@ -1,4 +1,5 @@
 #!/bin/bash
 
-# Serve the built files from the 'dist' directory using Python's server
+npm install
+npm run build
 python3 -m http.server $PORT --directory dist
