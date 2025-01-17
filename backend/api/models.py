@@ -35,7 +35,7 @@ class User(Base):
 class Conversation(Base):
     __tablename__ = "conversations"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     conversation_id = Column(Integer, unique=True, index=True)
     user_id = Column(Integer, index=True)
     start_time = Column(DateTime(timezone=True), server_default=func.now())
