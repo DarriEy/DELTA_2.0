@@ -66,49 +66,6 @@ def create_message_in_db(db, content, sender, conversation_id, message_index):
     return db_message
 
 
-@router.post("/process")
-def process_input(
-    user_input: str = Body(...),
-    conversation_id: int = Body(...),
-    db: Session = Depends(get_db),
-):
-    log.info(f"Processing input: {user_input} for conversation: {conversation_id}")
-    try:
-        # Get the conversation from the database
-
-        conversation = db.query(DBConversation).filter(
-            DBConversation.conversation_id == conversation_id
-        ).first()
-
-        if not conversation:
-            raise HTTPException(status_code=404, detail="Conversation not found")
-
-        # Fetch the last message index for this conversation
-        last_message_index = (
-            db.query(func.max(DBMessage.message_index))
-            .filter(DBMessage.conversation_id == conversation_id)
-            .scalar()
-        ) or 0
-
-        # Create a new message entry in the database for the user input
-        create_message_in_db(
-            db, user_input, "user", conversation_id, last_message_index + 1
-        )
-
-        # Generate LLM response
-        llm_response = generate_response(user_input)
-
-        # Create a new message entry in the database for the LLM response
-        create_message_in_db(
-            db, llm_response, "assistant", conversation_id, last_message_index + 2
-        )
-
-        return {"llmResponse": llm_response}
-    except Exception as e:
-        log.error(f"Error in process_input: {e}")  # Log any errors
-        db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
-
 
 @router.post("/learn")
 def learn_input(
@@ -369,48 +326,33 @@ async def process_input(
 ):
     log.info(f"Processing input: {user_input} for conversation: {conversation_id}")
     try:
-        print(f"Received conversation_id in /process: {conversation_id}")
-
-        # Get the conversation from the database
         conversation = db.query(DBConversation).filter(
             DBConversation.conversation_id == conversation_id
         ).first()
 
-        print(f"Conversation from database: {conversation}")
-
         if not conversation:
-            print(f"Conversation not found for ID: {conversation_id}")
             raise HTTPException(status_code=404, detail="Conversation not found")
 
-        # Fetch the last message index for this conversation
+        # Fetch the last message index
         last_message_index = (
             db.query(func.max(DBMessage.message_index))
             .filter(DBMessage.conversation_id == conversation_id)
             .scalar()
         ) or 0
 
-        print(f"Last message index: {last_message_index}")
-
-        # Create a new message entry in the database for the user input
+        # Create user message
         create_message_in_db(
             db, user_input, "user", conversation_id, last_message_index + 1
         )
 
-        # Check if the user_input is a URL
-        if user_input.startswith("http://") or user_input.startswith("https://"):
-            content = await get_webpage_content(user_input)  # Await the coroutine
-            if content:
-                # Generate a response based on the content of the URL
-                llm_response = await generate_response(
-                    f"Here is content from a webpage: {content}"
-                )
-            else:
-                llm_response = "Could not fetch content from the provided URL."
-        else:
-            # Generate LLM response for normal text input
-            llm_response = await generate_response(user_input)  # Await the coroutine
+        # Generate and await LLM response
+        llm_response = await generate_response(user_input)  # Await the response
 
-        # Create a new message entry in the database for the LLM response
+        # Ensure llm_response is a string before storing in database
+        if not isinstance(llm_response, str):
+            raise ValueError("LLM response must be a string")
+
+        # Create assistant message
         create_message_in_db(
             db, llm_response, "assistant", conversation_id, last_message_index + 2
         )
@@ -418,6 +360,6 @@ async def process_input(
         return {"llmResponse": llm_response}
 
     except Exception as e:
-        log.error(f"Error in process_input: {e}")  # Log any errors
+        log.error(f"Error in process_input: {e}")
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
