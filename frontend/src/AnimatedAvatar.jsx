@@ -361,35 +361,48 @@ const handleSummaryCancel = () => {
     setConversationHistory(updatedHistory);
   
     try {
-      let conversationId = currentConversationId;
-  
-      if (!conversationId) {
-        conversationId = await createNewConversation(activeMode);
-        if (!conversationId) {
+      // Create a new conversation if it doesn't exist
+      if (!currentConversationId) {
+        const userId = 1;
+        const newConversationId = await createNewConversation(
+          activeMode,
+          userId
+        );
+        if (!newConversationId) {
           // Handle conversation creation failure
+          console.error("Failed to create a new conversation.");
+          alert("Failed to start a new conversation. Please try again.");
           return;
         }
-        // No need to call setCurrentConversationId here again
+  
+        // Update the state variable with the new ID
+        setCurrentConversationId(newConversationId);
       }
-
-    // Update conversation history
-    setConversationHistory((prevHistory) => [
-      ...prevHistory,
-      { role: "user", content: text },
-    ]);
-
-    // Send to LLM after updating history
-    let apiEndpoint = showEducationalContent
-      ? "/api/learn"
-      : "/api/process";
-
-    console.log("apiEndpoint:", apiEndpoint); // Check the value
-
-    const llmResponse = await sendToLLM(
-      [...conversationHistory, { role: "user", content: text }],
-      apiEndpoint,
-      currentConversationId
-    );
+  
+      // Update conversation history
+      setConversationHistory((prevHistory) => [
+        ...prevHistory,
+        { role: "user", content: text },
+      ]);
+  
+      if (currentConversationId === null) {
+        console.error("Error: currentConversationId is null");
+        alert(
+          "Error: Conversation ID is null. Please try starting a new conversation."
+        );
+        return;
+      }
+  
+      // Send to LLM after updating history
+      let apiEndpoint = showEducationalContent
+        ? "/api/learn/"
+        : "/api/process/";
+  
+      const llmResponse = await sendToLLM(
+        [...conversationHistory, { role: "user", content: text }], // Pass updated history
+        apiEndpoint,
+        currentConversationId // Use the updated currentConversationId
+      );
 
   
         if (llmResponse) {

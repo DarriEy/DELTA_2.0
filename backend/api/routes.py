@@ -350,7 +350,7 @@ async def get_webpage_content(url: str) -> str:
     """Fetches and extracts the main content of a webpage."""
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.get(url)
+            response = await client.get(url) # Await the get call
             response.raise_for_status()  # Raise an exception for bad status codes
 
             soup = BeautifulSoup(response.content, 'html.parser')
@@ -396,7 +396,7 @@ async def process_input(
             db, user_input, "user", conversation_id, last_message_index + 1
         )
 
-        # Check if the user_input is a URL
+         # Check if the user_input is a URL
         if user_input.startswith("http://") or user_input.startswith("https://"):
             content = await get_webpage_content(user_input)
             if content:
@@ -408,7 +408,7 @@ async def process_input(
                 llm_response = "Could not fetch content from the provided URL."
         else:
             # Generate LLM response for normal text input
-            llm_response = await generate_response(user_input)
+            llm_response = await generate_response(user_input) # Ensure that this is awaited
 
         # Create a new message entry in the database for the LLM response
         create_message_in_db(
