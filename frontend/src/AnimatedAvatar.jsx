@@ -442,7 +442,8 @@ const handleSummaryCancel = () => {
   
     while (retries < maxRetries) {
       try {
-        const url = `<span class="math-inline">\{API\_BASE\_URL\}</span>{apiEndpoint}`;
+        // Correct URL construction using template literals (backticks)
+        const url = `${API_BASE_URL}${apiEndpoint}`;
         console.log("Sending POST request to:", url);
   
         const response = await fetch(url, {
