@@ -357,7 +357,7 @@ def get_webpage_content(url: str) -> str:
         print(f"Error fetching webpage content: {e}")
         return ""
 
-@router.post("/process")
+@router.post("/process") # Ensure it's a POST route
 def process_input(
     user_input: str = Body(...),
     conversation_id: int = Body(...),

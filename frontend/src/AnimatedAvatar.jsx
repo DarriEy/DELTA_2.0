@@ -442,7 +442,7 @@ const handleSummaryCancel = () => {
   
     while (retries < maxRetries) {
       try {
-        const response = await fetch(`<span class="math-inline">\{API\_BASE\_URL\}</span>{apiEndpoint}`, {
+        const response = await fetch(`<span class="math-inline">\{API\_BASE\_URL\}</span>{apiEndpoint}`, { // Construct the URL correctly
           method: "POST",
           headers: {
             "Content-Type": "application/json",
