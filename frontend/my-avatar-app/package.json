@@ -6,6 +6,7 @@
 "scripts": {
     "dev": "vite --host",
     "build": "vite build",
+    "start": "node server.js",
     "serve": "vite preview --port $PORT --host --strictPort"
 },
   "dependencies": {
