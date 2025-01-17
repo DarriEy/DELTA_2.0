@@ -237,14 +237,13 @@ def create_conversation(
         print("Creating DBConversation object:", db_conversation)
         db.add(db_conversation)
         db.commit()
-        db.refresh(db_conversation)
+        db.refresh(db_conversation) # Get the updated object from the database
+        print("Conversation object after refresh:", db_conversation)
 
         # Manually set the conversation_id to the id field
         db_conversation.conversation_id = db_conversation.id
 
-        print("Conversation object after refresh:", db_conversation)
-
-        # Convert the ORM object to a dictionary
+        # Convert the ORM object to a dictionary that Pydantic can validate against the response_model
         conversation_dict = {
             "id": db_conversation.id,
             "conversation_id": db_conversation.conversation_id,
@@ -254,6 +253,7 @@ def create_conversation(
             "summary": db_conversation.summary,
             "active_mode": db_conversation.active_mode
         }
+        db.commit() # Commit the changes to the database
 
         return conversation_dict
     except Exception as e:
@@ -368,6 +368,7 @@ def process_input(
     conversation_id: int = Body(...),
     db: Session = Depends(get_db),
 ):
+    print(f"Type of conversation_id: {type(conversation_id)}") 
     log.info(f"Processing input: {user_input} for conversation: {conversation_id}")
     try:
         print(f"Received conversation_id in /process: {conversation_id}")
