@@ -408,7 +408,7 @@ async def process_input(
                 llm_response = "Could not fetch content from the provided URL."
         else:
             # Generate LLM response for normal text input
-            llm_response = await generate_response(user_input)  # Ensure awaited
+            llm_response = await generate_response(user_input)  # Await the coroutine
 
         # Create a new message entry in the database for the LLM response
         create_message_in_db(
