@@ -3,6 +3,7 @@ from .schemas import UserInput, ImagePrompt, ConversationCreate
 import yaml
 import json
 import asyncpg
+import httpx
 import subprocess
 from sqlalchemy.future import select
 from sqlalchemy import update, func
@@ -345,25 +346,23 @@ async def health_check():
     return {"status": "ok"}
 
 
-def get_webpage_content(url: str) -> str:
+async def get_webpage_content(url: str) -> str:
     """Fetches and extracts the main content of a webpage."""
     try:
-        response = requests.get(url)
-        response.raise_for_status()  # Raise an exception for bad status codes
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url)
+            response.raise_for_status()  # Raise an exception for bad status codes
 
-        soup = BeautifulSoup(response.content, 'html.parser')
-        # Extract text from specific tags or classes if needed
-        # For example, if the main content is within <article> tags:
-        # main_content = soup.find('article').get_text()
-        main_content = soup.get_text()  # Extracts all text
+            soup = BeautifulSoup(response.content, 'html.parser')
+            main_content = soup.get_text()  # Extracts all text
 
-        return main_content
-    except requests.exceptions.RequestException as e:
+            return main_content
+    except httpx.RequestError as e:
         print(f"Error fetching webpage content: {e}")
         return ""
     
 @router.post("/process")
-def process_input(
+async def process_input(
     user_input: str = Body(...),
     conversation_id: int = Body(...),
     db: Session = Depends(get_db),
@@ -403,12 +402,12 @@ def process_input(
             content = get_webpage_content(user_input)
             if content:
                 # Generate a response based on the content of the URL
-                llm_response = generate_response(f"Here is content from a webpage: {content}")
+                llm_response = await generate_response(f"Here is content from a webpage: {content}") # Use await here
             else:
                 llm_response = "Could not fetch content from the provided URL."
         else:
             # Generate LLM response for normal text input
-            llm_response = generate_response(user_input)
+            llm_response = await generate_response(user_input) # Use await here
 
         # Create a new message entry in the database for the LLM response
         create_message_in_db(
