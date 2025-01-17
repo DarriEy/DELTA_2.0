@@ -367,7 +367,6 @@ async def process_input(
     conversation_id: int = Body(...),
     db: Session = Depends(get_db),
 ):
-    print(f"Type of conversation_id: {type(conversation_id)}") 
     log.info(f"Processing input: {user_input} for conversation: {conversation_id}")
     try:
         print(f"Received conversation_id in /process: {conversation_id}")
@@ -377,10 +376,10 @@ async def process_input(
             DBConversation.conversation_id == conversation_id
         ).first()
 
-        print(f"Query result for conversation: {conversation}")
+        print(f"Conversation from database: {conversation}")
 
         if not conversation:
-            print(f"Conversation not found for ID: {conversation_id}")  # Log if not found
+            print(f"Conversation not found for ID: {conversation_id}")
             raise HTTPException(status_code=404, detail="Conversation not found")
 
         # Fetch the last message index for this conversation
@@ -399,15 +398,17 @@ async def process_input(
 
         # Check if the user_input is a URL
         if user_input.startswith("http://") or user_input.startswith("https://"):
-            content = get_webpage_content(user_input)
+            content = await get_webpage_content(user_input)
             if content:
                 # Generate a response based on the content of the URL
-                llm_response = await generate_response(f"Here is content from a webpage: {content}") # Use await here
+                llm_response = await generate_response(
+                    f"Here is content from a webpage: {content}"
+                )
             else:
                 llm_response = "Could not fetch content from the provided URL."
         else:
             # Generate LLM response for normal text input
-            llm_response = await generate_response(user_input) # Use await here
+            llm_response = await generate_response(user_input)
 
         # Create a new message entry in the database for the LLM response
         create_message_in_db(
@@ -415,6 +416,7 @@ async def process_input(
         )
 
         return {"llmResponse": llm_response}
+
     except Exception as e:
         log.error(f"Error in process_input: {e}")  # Log any errors
         db.rollback()
