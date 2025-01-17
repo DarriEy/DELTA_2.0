@@ -127,19 +127,21 @@ const AnimatedAvatar = () => {
       }
   
       const data = await response.json();
-      console.log("New conversation created with ID:", data.conversation_id);
+      const newConversationId = data.conversation_id; // Get the new ID
+      console.log("New conversation created with ID:", newConversationId);
   
       // Update state with the new conversation ID
-      setCurrentConversationId(data.conversation_id);
+      setCurrentConversationId(newConversationId);
   
       // Return the new conversation ID
-      return data.conversation_id;
+      return newConversationId;
     } catch (error) {
       console.error("Error creating conversation:", error);
       alert(error.message);
       return null;
     }
   };
+
 
 const generateGeneralBackgroundImage = async () => {
   await new Promise((resolve) => setTimeout(resolve, 3000));
@@ -362,37 +364,33 @@ const handleSummaryCancel = () => {
       // Create a new conversation if it doesn't exist
       if (!currentConversationId) {
         const userId = 1;
-        const newConversationId = await createNewConversation(
-          activeMode,
-          userId
-        );
+        const newConversationId = await createNewConversation(activeMode, userId);
         if (!newConversationId) {
           // Handle conversation creation failure
           console.error("Failed to create a new conversation.");
           alert("Failed to start a new conversation. Please try again.");
           return;
         }
-
+  
         // Update the state variable with the new ID
         setCurrentConversationId(newConversationId);
       }
 
-      if (currentConversationId) {
-        // Update conversation history
-        setConversationHistory((prevHistory) => [
-            ...prevHistory,
-            { role: "user", content: text },
-        ]);
+    // Update conversation history
+    setConversationHistory((prevHistory) => [
+      ...prevHistory,
+      { role: "user", content: text },
+    ]);
 
-        // Send to LLM after updating history
-        let apiEndpoint = showEducationalContent
-            ? "/api/learn/"
-            : "/api/process/";
-        const llmResponse = await sendToLLM(
-            [...conversationHistory, { role: "user", content: text }], // Pass updated history
-            apiEndpoint,
-            conversationId // Use the updated conversationId
-        );
+    // Send to LLM after updating history
+    let apiEndpoint = showEducationalContent
+      ? "/api/learn/"
+      : "/api/process/";
+    const llmResponse = await sendToLLM(
+      [...conversationHistory, { role: "user", content: text }], // Pass updated history
+      apiEndpoint,
+      currentConversationId // Use the updated currentConversationId
+    );
 
   
         if (llmResponse) {
@@ -404,7 +402,7 @@ const handleSummaryCancel = () => {
         } else {
           console.warn("LLM response was undefined. Skipping speech.");
         }
-      }
+      
     } catch (error) {
       console.error("Error handling speech recognition result:", error);
       alert("Error processing your request. Please try again.");
@@ -442,7 +440,7 @@ const handleSummaryCancel = () => {
   
     while (retries < maxRetries) {
       try {
-        // Correct URL construction using template literals (backticks)
+        // Construct the URL for the request
         const url = `${API_BASE_URL}${apiEndpoint}`;
         console.log("Sending POST request to:", url);
   
@@ -453,7 +451,7 @@ const handleSummaryCancel = () => {
           },
           body: JSON.stringify({
             user_input: userMessage,
-            conversation_id: conversationId,
+            conversation_id: conversationId, // Use the passed conversationId
           }),
         });
 
