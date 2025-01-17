@@ -396,7 +396,7 @@ async def process_input(
             db, user_input, "user", conversation_id, last_message_index + 1
         )
 
-         # Check if the user_input is a URL
+        # Check if the user_input is a URL
         if user_input.startswith("http://") or user_input.startswith("https://"):
             content = await get_webpage_content(user_input)
             if content:
@@ -408,7 +408,7 @@ async def process_input(
                 llm_response = "Could not fetch content from the provided URL."
         else:
             # Generate LLM response for normal text input
-            llm_response = await generate_response(user_input) # Ensure that this is awaited
+            llm_response = await generate_response(user_input)  # Ensure awaited
 
         # Create a new message entry in the database for the LLM response
         create_message_in_db(

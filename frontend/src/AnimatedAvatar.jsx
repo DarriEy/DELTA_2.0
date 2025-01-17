@@ -361,14 +361,13 @@ const handleSummaryCancel = () => {
     setConversationHistory(updatedHistory);
   
     try {
+      let conversationId = currentConversationId; // Use a local variable
+  
       // Create a new conversation if it doesn't exist
-      if (!currentConversationId) {
+      if (!conversationId) {
         const userId = 1;
-        const newConversationId = await createNewConversation(
-          activeMode,
-          userId
-        );
-        if (!newConversationId) {
+        conversationId = await createNewConversation(activeMode, userId);
+        if (!conversationId) {
           // Handle conversation creation failure
           console.error("Failed to create a new conversation.");
           alert("Failed to start a new conversation. Please try again.");
@@ -376,7 +375,7 @@ const handleSummaryCancel = () => {
         }
   
         // Update the state variable with the new ID
-        setCurrentConversationId(newConversationId);
+        setCurrentConversationId(conversationId);
       }
   
       // Update conversation history
@@ -385,7 +384,8 @@ const handleSummaryCancel = () => {
         { role: "user", content: text },
       ]);
   
-      if (currentConversationId === null) {
+      // Check if currentConversationId is null
+      if (!currentConversationId) {
         console.error("Error: currentConversationId is null");
         alert(
           "Error: Conversation ID is null. Please try starting a new conversation."
@@ -397,11 +397,10 @@ const handleSummaryCancel = () => {
       let apiEndpoint = showEducationalContent
         ? "/api/learn/"
         : "/api/process/";
-  
       const llmResponse = await sendToLLM(
         [...conversationHistory, { role: "user", content: text }], // Pass updated history
         apiEndpoint,
-        currentConversationId // Use the updated currentConversationId
+        conversationId
       );
 
   
@@ -450,6 +449,11 @@ const handleSummaryCancel = () => {
     const maxRetries = 3;
     let fullResponse = "";
   
+    if (conversationId === null) {
+      console.error("Error: conversationId is null in sendToLLM");
+      return; // Don't send the request
+    }
+
   console.log("sendToLLM - conversationId:", conversationId); // Log the conversation ID
 
   while (retries < maxRetries) {
