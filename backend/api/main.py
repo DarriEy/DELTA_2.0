@@ -15,7 +15,7 @@ app = FastAPI(title="DELTA Orchestrator")
 
 # Configure CORS
 origins = [
-    "https://delta-h-7344a1b27b42.herokuapp.com",  # Your frontend URL
+    "https://delta-h-frontend-b338f294b004.herokuapp.com/",  # Your frontend URL
     "http://localhost:5173",  # For local development
     "http://localhost:4173",
     "http://localhost:14525",
