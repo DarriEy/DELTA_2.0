@@ -15,7 +15,7 @@ app = FastAPI(title="DELTA Orchestrator")
 
 # Configure CORS
 origins = [
-    "https://delta-h-frontend-b338f294b004.herokuapp.com/",  # Your frontend URL
+    "https://delta-h-frontend-b338f294b004.herokuapp.com",  # Your frontend URL
     "http://localhost:5173",  # For local development
     "http://localhost:4173",
     "http://localhost:14525",
@@ -40,6 +40,7 @@ engine = create_engine(DATABASE_URL, echo=False)
 
 # Use Session for database operations
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
 
 def get_db():
     db = SessionLocal()
