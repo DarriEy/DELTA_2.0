@@ -127,12 +127,12 @@ const AnimatedAvatar = () => {
       }
   
       const data = await response.json();
-      const newConversationId = data.conversation_id; // Get the new ID
+      const newConversationId = data.conversation_id;
       console.log("New conversation created with ID:", newConversationId);
-  
+    
       // Update state with the new conversation ID
-      setCurrentConversationId(newConversationId);
-  
+      setCurrentConversationId(newConversationId); // Update state immediately
+    
       // Return the new conversation ID
       return newConversationId;
     } catch (error) {
@@ -361,19 +361,15 @@ const handleSummaryCancel = () => {
     setConversationHistory(updatedHistory);
   
     try {
-      // Create a new conversation if it doesn't exist
-      if (!currentConversationId) {
-        const userId = 1;
-        const newConversationId = await createNewConversation(activeMode, userId);
-        if (!newConversationId) {
+      let conversationId = currentConversationId;
+  
+      if (!conversationId) {
+        conversationId = await createNewConversation(activeMode);
+        if (!conversationId) {
           // Handle conversation creation failure
-          console.error("Failed to create a new conversation.");
-          alert("Failed to start a new conversation. Please try again.");
           return;
         }
-  
-        // Update the state variable with the new ID
-        setCurrentConversationId(newConversationId);
+        // No need to call setCurrentConversationId here again
       }
 
     // Update conversation history
@@ -386,11 +382,12 @@ const handleSummaryCancel = () => {
     let apiEndpoint = showEducationalContent
       ? "/api/learn/"
       : "/api/process/";
-    const llmResponse = await sendToLLM(
-      [...conversationHistory, { role: "user", content: text }], // Pass updated history
-      apiEndpoint,
-      currentConversationId // Use the updated currentConversationId
-    );
+
+      const llmResponse = await sendToLLM(
+        [...conversationHistory, { role: "user", content: text }],
+        apiEndpoint,
+        conversationId // Use the updated conversationId
+      );
 
   
         if (llmResponse) {
@@ -438,24 +435,29 @@ const handleSummaryCancel = () => {
     const maxRetries = 3;
     let fullResponse = "";
   
-    while (retries < maxRetries) {
-      try {
-        // Construct the URL for the request
-        const url = `${API_BASE_URL}${apiEndpoint}`;
-        console.log("Sending POST request to:", url);
-  
-        const response = await fetch(url, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            user_input: userMessage,
-            conversation_id: conversationId, // Use the passed conversationId
-          }),
-        });
+  console.log("sendToLLM - conversationId:", conversationId); // Log the conversation ID
 
-        console.log("LLM response status:", response.status);
+  while (retries < maxRetries) {
+    try {
+      const url = `<span class="math-inline">\{API\_BASE\_URL\}</span>{apiEndpoint}`;
+      console.log("Sending POST request to:", url);
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          user_input: userMessage,
+          conversation_id: conversationId,
+        }),
+      });
+
+      console.log("sendToLLM - Request body:", JSON.stringify({
+        user_input: userMessage,
+        conversation_id: conversationId,
+      })); // Log the request body
+
   
         if (!response.ok) {
           console.error("HTTP error! status:", response.status);
