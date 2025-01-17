@@ -116,26 +116,30 @@ const AnimatedAvatar = () => {
           user_id: userId, // Include user_id in the request body
         }),
       });
-
+  
       if (!response.ok) {
-      const errorData = await response.json();
-      console.error("Detailed error data:", errorData);
-      throw new Error(
+        const errorData = await response.json();
+        console.error("Detailed error data:", errorData);
+        throw new Error(
           errorData.detail ||
-          "Failed to create conversation: " + JSON.stringify(errorData)
-      );
+            "Failed to create conversation: " + JSON.stringify(errorData)
+        );
       }
-
+  
       const data = await response.json();
-      setCurrentConversationId(data.conversation_id); // Set the conversation ID from the response
       console.log("New conversation created with ID:", data.conversation_id);
+  
+      // Update state with the new conversation ID
+      setCurrentConversationId(data.conversation_id);
+  
+      // Return the new conversation ID
       return data.conversation_id;
-  } catch (error) {
+    } catch (error) {
       console.error("Error creating conversation:", error);
       alert(error.message);
       return null;
-  }
-};
+    }
+  };
 
 const generateGeneralBackgroundImage = async () => {
   await new Promise((resolve) => setTimeout(resolve, 3000));
@@ -355,34 +359,35 @@ const handleSummaryCancel = () => {
     setConversationHistory(updatedHistory);
   
     try {
+      let conversationId = currentConversationId; // Use a local variable
+
       // Create a new conversation if it doesn't exist
-      if (!currentConversationId) {
-        const userId = 1;
-        const newConversationId = await createNewConversation(activeMode, userId);
-        if (!newConversationId) {
-          // Handle conversation creation failure
-          console.error("Failed to create a new conversation.");
-          alert("Failed to start a new conversation. Please try again.");
-          return;
-        }
-        setCurrentConversationId(newConversationId);
+      if (!conversationId) {
+          const userId = 1;
+          conversationId = await createNewConversation(activeMode, userId);
+          if (!conversationId) {
+              // Handle conversation creation failure
+              console.error("Failed to create a new conversation.");
+              alert("Failed to start a new conversation. Please try again.");
+              return;
+          }
       }
 
-      if (currentConversationId) {
+      if (conversationId) {
         // Update conversation history
         setConversationHistory((prevHistory) => [
-          ...prevHistory,
-          { role: "user", content: text },
+            ...prevHistory,
+            { role: "user", content: text },
         ]);
 
         // Send to LLM after updating history
         let apiEndpoint = showEducationalContent
-          ? "/api/learn/"
-          : "/api/process/";
+            ? "/api/learn/"
+            : "/api/process/";
         const llmResponse = await sendToLLM(
-          [...conversationHistory, { role: "user", content: text }], // Pass updated history
-          apiEndpoint,
-          currentConversationId
+            [...conversationHistory, { role: "user", content: text }], // Pass updated history
+            apiEndpoint,
+            conversationId // Use the updated conversationId
         );
 
   
@@ -431,9 +436,9 @@ const handleSummaryCancel = () => {
     const maxRetries = 3;
     let fullResponse = "";
   
-   while (retries < maxRetries) {
+    while (retries < maxRetries) {
       try {
-        const response = await fetch(`${API_BASE_URL}${apiEndpoint}`, {
+        const response = await fetch(`<span class="math-inline">\{API\_BASE\_URL\}</span>{apiEndpoint}`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -443,7 +448,7 @@ const handleSummaryCancel = () => {
             conversation_id: conversationId,
           }),
         });
-  
+        
         console.log("LLM response status:", response.status);
   
         if (!response.ok) {
