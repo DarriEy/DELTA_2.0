@@ -4,10 +4,11 @@
   "version": "0.0.0",
   "type": "module",
 "scripts": {
-    "dev": "vite --host",
+    "dev": "vite",
     "build": "vite build",
     "start": "node server.js",
-    "serve": "vite preview --port $PORT --host --strictPort"
+    "serve": "vite preview --port $PORT --host --strictPort",
+    "preview": "vite preview"
 },
   "dependencies": {
     "react": "^18.3.1",
