@@ -35,8 +35,8 @@ class User(Base):
 class Conversation(Base):
     __tablename__ = "conversations"
 
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    conversation_id = Column(Integer, unique=True, index=True)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)  # Auto-incrementing
+    conversation_id = Column(Integer, unique=True, index=True)  # Should this also be auto-incrementing?
     user_id = Column(Integer, index=True)
     start_time = Column(DateTime(timezone=True), server_default=func.now())
     end_time = Column(DateTime(timezone=True))
@@ -44,7 +44,7 @@ class Conversation(Base):
     active_mode = Column(String, nullable=True)
 
     def __repr__(self):
-        return f"<Conversation(id={self.conversation_id}, user_id={self.user_id})>"
+        return f"<Conversation(id={self.id}, conversation_id={self.conversation_id}, user_id={self.user_id})>"
 
 # Define the Message model
 class Message(Base):
