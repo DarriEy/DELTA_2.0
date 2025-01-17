@@ -15,7 +15,7 @@ class User(UserBase):
     registration_date: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class UserInput(BaseModel):
     user_input: str
@@ -24,9 +24,7 @@ class ConversationBase(BaseModel):
     active_mode: str
 
 class ImagePrompt(BaseModel):
-    prompt: str = Field(
-        description="The text prompt for image generation", min_length=5, max_length=1000
-    )
+    prompt: str 
 
 class ConversationCreate(ConversationBase):
     user_id: Optional[int] = None
@@ -38,7 +36,7 @@ class Conversation(ConversationBase):
     end_time: Optional[datetime]
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class MessageBase(BaseModel):
     content: str
@@ -53,7 +51,7 @@ class Message(MessageBase):
     timestamp: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class ModelConfigBase(BaseModel):
     config_name: str
@@ -75,7 +73,7 @@ class ModelConfig(ModelConfigBase):
     creation_time: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class ModelRunBase(BaseModel):
     status: str
@@ -90,7 +88,7 @@ class ModelRun(ModelRunBase):
     end_time: Optional[datetime]
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class EducationalProgressBase(BaseModel):
     topic_name: str
@@ -106,7 +104,7 @@ class EducationalProgress(EducationalProgressBase):
     last_accessed: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # Consider moving this to a separate module or routes.py if it's only used there

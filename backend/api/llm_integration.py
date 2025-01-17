@@ -27,7 +27,7 @@ LOCATION = os.environ.get("LOCATION")
 
 async def generate_image(prompt: str) -> str:
     """Generates an image using Imagen 3 based on the given prompt."""
-    url = f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/{PROJECT_ID}/locations/{LOCATION}/publishers/google/models/imagen-3.0-generate-001:predict"
+    url = f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/{PROJECT_ID}/locations/{LOCATION}/publishers/google/models/imagegeneration:predict"
 
     try:
         # Explicitly request the cloud-platform scope

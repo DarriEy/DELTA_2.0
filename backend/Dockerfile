@@ -1,52 +1,48 @@
-FROM python:3.10-slim
+# Use the official Python image as the base image
+FROM python:3.9-slim
 
-LABEL maintainer="your_name <your_email@example.com>"
-LABEL description="Backend for DELTA hydrological AI research assistant"
-
-ENV PYTHONUNBUFFERED=1
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONIOENCODING=utf-8
-
+# Set the working directory inside the container
 WORKDIR /app
 
-# Install system dependencies including wget for downloading wait-for-it
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    libpq-dev \
-    gcc \
-    wget \
-    postgresql-client \
-    && rm -rf /var/lib/apt/lists/*
-
-# Download wait-for-it script
-RUN wget -O /usr/local/bin/wait-for-it.sh https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh \
-    && chmod +x /usr/local/bin/wait-for-it.sh
-
-# Copy requirements first for better caching
+# Copy the requirements file to the working directory
 COPY requirements.txt /app/
-RUN pip install --no-cache-dir -r /app/requirements.txt
 
-# Copy application files
+# Install the required packages
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Install psycopg2-binary explicitly
+RUN pip install --no-cache-dir psycopg2-binary
+
+# Copy the api directory
 COPY api /app/api
-COPY alembic /app/alembic
-COPY modules /app/modules
-COPY utils /app/utils
+
+# Copy alembic configuration and migrations
 COPY alembic.ini /app/alembic.ini
-COPY request.json /app/request.json
+COPY alembic /app/alembic
 
-# Copy the Google Cloud credentials file (now using relative path)
-COPY google-credentials.json /app/google-credentials.json
+# Copy utils
+COPY utils /app/utils
 
+# Copy modules
+COPY modules /app/modules
+
+# Copy the google-credentials.json file
+RUN echo "{}" > /app/google-credentials.json
+
+# Expose the port that the application will run on
 EXPOSE 8000
-ENV GOOGLE_APPLICATION_CREDENTIALS=/app/google-credentials.json
 
-# Create and setup start script
-COPY <<EOF /app/start.sh
-#!/bin/bash
-wait-for-it.sh db:5432 -t 60 -- echo "Database is up"
-uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
-EOF
+# Copy the wait-for-it.sh script into the container
+COPY wait-for-it.sh /app/wait-for-it.sh
 
+# Give execution permissions to the wait-for-it.sh script
+RUN chmod +x /app/wait-for-it.sh
+
+# Copy the start.sh script into the container
+COPY start.sh /app/start.sh
+
+# Give execution permissions to the start.sh script
 RUN chmod +x /app/start.sh
 
+# Set the command to run when the container starts
 CMD ["/app/start.sh"]
