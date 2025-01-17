@@ -359,21 +359,25 @@ const handleSummaryCancel = () => {
     setConversationHistory(updatedHistory);
   
     try {
-      let conversationId = currentConversationId; // Use a local variable
-
       // Create a new conversation if it doesn't exist
-      if (!conversationId) {
-          const userId = 1;
-          conversationId = await createNewConversation(activeMode, userId);
-          if (!conversationId) {
-              // Handle conversation creation failure
-              console.error("Failed to create a new conversation.");
-              alert("Failed to start a new conversation. Please try again.");
-              return;
-          }
+      if (!currentConversationId) {
+        const userId = 1;
+        const newConversationId = await createNewConversation(
+          activeMode,
+          userId
+        );
+        if (!newConversationId) {
+          // Handle conversation creation failure
+          console.error("Failed to create a new conversation.");
+          alert("Failed to start a new conversation. Please try again.");
+          return;
+        }
+
+        // Update the state variable with the new ID
+        setCurrentConversationId(newConversationId);
       }
 
-      if (conversationId) {
+      if (currentConversationId) {
         // Update conversation history
         setConversationHistory((prevHistory) => [
             ...prevHistory,
@@ -448,7 +452,7 @@ const handleSummaryCancel = () => {
             conversation_id: conversationId,
           }),
         });
-        
+
         console.log("LLM response status:", response.status);
   
         if (!response.ok) {

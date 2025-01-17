@@ -365,10 +365,14 @@ def process_input(
 ):
     log.info(f"Processing input: {user_input} for conversation: {conversation_id}")
     try:
+        print(f"Received conversation_id in /process: {conversation_id}") # Log received ID
+
         # Get the conversation from the database
         conversation = db.query(DBConversation).filter(
             DBConversation.conversation_id == conversation_id
         ).first()
+
+        print(f"Found conversation in database: {conversation}") # Log the found conversation
 
         if not conversation:
             raise HTTPException(status_code=404, detail="Conversation not found")
