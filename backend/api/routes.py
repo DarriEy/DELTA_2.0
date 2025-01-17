@@ -398,7 +398,7 @@ async def process_input(
 
         # Check if the user_input is a URL
         if user_input.startswith("http://") or user_input.startswith("https://"):
-            content = await get_webpage_content(user_input)
+            content = await get_webpage_content(user_input)  # Await the coroutine
             if content:
                 # Generate a response based on the content of the URL
                 llm_response = await generate_response(
