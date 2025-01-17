@@ -234,10 +234,24 @@ def create_conversation(
     print("Conversation as dict:", conversation.dict())
     try:
         db_conversation = DBConversation(**conversation.dict())
+        print("Creating DBConversation object:", db_conversation)
         db.add(db_conversation)
         db.flush()
         db.commit()
-        return {"conversation_id": db_conversation.id} #Return the id here
+        db.refresh(db_conversation)
+        print("Conversation object after refresh:", db_conversation)
+
+        # Convert the ORM object to a dictionary that Pydantic can validate against the response_model
+        conversation_dict = {
+            "conversation_id": db_conversation.id,
+            "user_id": db_conversation.user_id,
+            "start_time": db_conversation.start_time,
+            "end_time": db_conversation.end_time,
+            "summary": db_conversation.summary,
+            "active_mode": db_conversation.active_mode
+        }
+
+        return conversation_dict  # Return the full dictionary
     except Exception as e:
         db.rollback()
         print(f"Error creating conversation: {e}")
