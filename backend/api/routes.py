@@ -356,8 +356,8 @@ def get_webpage_content(url: str) -> str:
     except requests.exceptions.RequestException as e:
         print(f"Error fetching webpage content: {e}")
         return ""
-
-@router.post("/process") # Ensure it's a POST route
+    
+@router.post("/process")
 def process_input(
     user_input: str = Body(...),
     conversation_id: int = Body(...),
@@ -365,16 +365,17 @@ def process_input(
 ):
     log.info(f"Processing input: {user_input} for conversation: {conversation_id}")
     try:
-        print(f"Received conversation_id in /process: {conversation_id}") # Log received ID
+        print(f"Received conversation_id in /process: {conversation_id}")
 
         # Get the conversation from the database
         conversation = db.query(DBConversation).filter(
             DBConversation.conversation_id == conversation_id
         ).first()
 
-        print(f"Found conversation in database: {conversation}") # Log the found conversation
+        print(f"Query result for conversation: {conversation}")
 
         if not conversation:
+            print(f"Conversation not found for ID: {conversation_id}")  # Log if not found
             raise HTTPException(status_code=404, detail="Conversation not found")
 
         # Fetch the last message index for this conversation
@@ -383,6 +384,8 @@ def process_input(
             .filter(DBMessage.conversation_id == conversation_id)
             .scalar()
         ) or 0
+
+        print(f"Last message index: {last_message_index}")
 
         # Create a new message entry in the database for the user input
         create_message_in_db(
@@ -407,7 +410,6 @@ def process_input(
         )
 
         return {"llmResponse": llm_response}
-
     except Exception as e:
         log.error(f"Error in process_input: {e}")  # Log any errors
         db.rollback()
