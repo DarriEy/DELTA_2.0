@@ -30,7 +30,8 @@ class ConversationCreate(ConversationBase):
     user_id: Optional[int] = None
 
 class Conversation(ConversationBase):
-    conversation_id: int
+    id: Optional[int] = None
+    conversation_id: Optional[int] = None
     user_id: int
     start_time: datetime
     end_time: Optional[datetime]
