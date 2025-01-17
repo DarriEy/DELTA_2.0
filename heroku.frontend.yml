@@ -1,0 +1,5 @@
+build:
+  docker:
+    web: frontend/my-avatar-app/Dockerfile
+run:
+  web: npm run serve
