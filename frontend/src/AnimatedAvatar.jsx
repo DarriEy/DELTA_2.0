@@ -129,10 +129,12 @@ const AnimatedAvatar = () => {
       const data = await response.json();
       const newConversationId = data.conversation_id;
       console.log("New conversation created with ID:", newConversationId);
-    
+  
       // Update state with the new conversation ID
-      setCurrentConversationId(newConversationId); // Update state immediately
-    
+      await new Promise((resolve) =>
+        setCurrentConversationId(newConversationId, resolve)
+      );
+  
       // Return the new conversation ID
       return newConversationId;
     } catch (error) {
@@ -361,22 +363,20 @@ const handleSummaryCancel = () => {
     setConversationHistory(updatedHistory);
   
     try {
-      let conversationId = currentConversationId; // Use a local variable
+      let conversationId = currentConversationId;
   
-      // Create a new conversation if it doesn't exist
       if (!conversationId) {
-        const userId = 1;
-        conversationId = await createNewConversation(activeMode, userId);
+        // Await the creation and state update
+        conversationId = await createNewConversation(activeMode);
+  
         if (!conversationId) {
-          // Handle conversation creation failure
           console.error("Failed to create a new conversation.");
           alert("Failed to start a new conversation. Please try again.");
           return;
         }
-  
-        // Update the state variable with the new ID
-        setCurrentConversationId(conversationId);
+        // No need to call setCurrentConversationId here anymore
       }
+  
   
       // Update conversation history
       setConversationHistory((prevHistory) => [
