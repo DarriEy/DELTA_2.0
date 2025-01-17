@@ -380,14 +380,16 @@ const handleSummaryCancel = () => {
 
     // Send to LLM after updating history
     let apiEndpoint = showEducationalContent
-      ? "/api/learn/"
-      : "/api/process/";
+      ? "/api/learn"
+      : "/api/process";
 
-      const llmResponse = await sendToLLM(
-        [...conversationHistory, { role: "user", content: text }],
-        apiEndpoint,
-        conversationId // Use the updated conversationId
-      );
+    console.log("apiEndpoint:", apiEndpoint); // Check the value
+
+    const llmResponse = await sendToLLM(
+      [...conversationHistory, { role: "user", content: text }],
+      apiEndpoint,
+      currentConversationId
+    );
 
   
         if (llmResponse) {
@@ -439,7 +441,7 @@ const handleSummaryCancel = () => {
 
   while (retries < maxRetries) {
     try {
-      const url = `<span class="math-inline">\{API\_BASE\_URL\}</span>{apiEndpoint}`;
+      const url = `${API_BASE_URL}/api/process`; // Make sure to change this if in educational mode
       console.log("Sending POST request to:", url);
 
       const response = await fetch(url, {
