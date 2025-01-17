@@ -308,42 +308,42 @@ const handleSummaryCancel = () => {
   const handleRunModels = async () => {
     console.log("Running model(s):", selectedModel);
     setIsLoading(true);
-
+  
     // Prepare the model setting for the API request
-    const modelSetting = selectedModel === "All of the above"
-    ? "FUSE,GR,FLASH,SUMMA,HYPE,MESH"
-    : selectedModel;
-
+    const modelSetting =
+      selectedModel === "All of the above"
+        ? "FUSE,GR,FLASH,SUMMA,HYPE,MESH"
+        : selectedModel;
+  
     try {
-    // Make an API request to the backend to run CONFLUENCE
-    const response = await fetch(`${API_BASE_URL}/api/run_confluence`, {
+      // Make an API request to the backend to run CONFLUENCE
+      const response = await fetch(`${API_BASE_URL}/api/run_confluence`, {
         method: "POST",
         headers: {
-        "Content-Type": "application/json",
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
-        model: modelSetting,
-        configPath: "/Users/darrieythorsson/compHydro/code/DELTA/backend/examples/config_Bow.yaml", // Update with your actual path
+          model: modelSetting, // Pass the model as a parameter
         }),
-    });
-
-    if (!response.ok) {
+      });
+  
+      if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.detail || "Failed to run CONFLUENCE");
-    }
-
-    const result = await response.json();
-    console.log("CONFLUENCE run result:", result);
-
-    // Handle the result, e.g., update state to show output or redirect to a results page
-    alert(`Model(s) ${selectedModel} run completed.`);
+      }
+  
+      const result = await response.json();
+      console.log("CONFLUENCE run result:", result);
+  
+      // Handle the result, e.g., update state to show output or redirect to a results page
+      alert(`Model(s) ${selectedModel} run completed.`);
     } catch (error) {
-    console.error("Error running CONFLUENCE:", error);
-    alert(error.message);
+      console.error("Error running CONFLUENCE:", error);
+      alert(error.message);
     } finally {
-    setIsLoading(false);
+      setIsLoading(false);
     }
-};
+  };
 
 
   const handleSpeechRecognitionResult = async (text) => {

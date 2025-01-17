@@ -17,7 +17,8 @@ import httpx
 import google.auth
 import traceback
 from dotenv import load_dotenv
-
+import asyncio
+from functools import partial
 load_dotenv()
 
 
@@ -129,16 +130,22 @@ async def generate_response(user_input: str, role: str = "DELTA"):
             print(f"Sending request to LLM with role: {role}")
             print(f"User input: {user_input}")
 
-            response = client.messages.create(
-                model=config["LLM_MODEL"],
-                max_tokens=1024,
-                system=system_prompt,
-                messages=[
-                    {"role": "user", "content": user_input},
-                ],
+            # Run the synchronous code in a thread pool
+            loop = asyncio.get_event_loop()
+            response = await loop.run_in_executor(
+                None,
+                partial(
+                    client.messages.create,
+                    model=config["LLM_MODEL"],
+                    max_tokens=1024,
+                    system=system_prompt,
+                    messages=[
+                        {"role": "user", "content": user_input},
+                    ],
+                )
             )
+            
             print(f"LLM response: {response}")
-
             return response.content[0].text
 
         except AnthropicError as e:
@@ -208,7 +215,7 @@ async def generate_response(user_input: str, role: str = "DELTA"):
                         }
                     ]
 
-                    final_response = await client.messages.create(
+                    final_response = client.messages.create(
                         model=config["LLM_MODEL"],
                         max_tokens=1024,
                         system=system_prompt,
