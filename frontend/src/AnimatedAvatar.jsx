@@ -377,13 +377,6 @@ const handleSummaryCancel = () => {
         // No need to call setCurrentConversationId here anymore
       }
   
-  
-      // Update conversation history
-      setConversationHistory((prevHistory) => [
-        ...prevHistory,
-        { role: "user", content: text },
-      ]);
-  
       // Check if currentConversationId is null
       if (!currentConversationId) {
         console.error("Error: currentConversationId is null");
@@ -397,22 +390,34 @@ const handleSummaryCancel = () => {
       let apiEndpoint = showEducationalContent
         ? "/api/learn/"
         : "/api/process/";
-      const llmResponse = await sendToLLM(
-        [...conversationHistory, { role: "user", content: text }], // Pass updated history
-        apiEndpoint,
-        conversationId
-      );
-
   
-        if (llmResponse) {
-          setConversationHistory((prevHistory) => [
-            ...prevHistory,
-            { role: "assistant", content: llmResponse },
-          ]);
-          await speak(llmResponse);
-        } else {
-          console.warn("LLM response was undefined. Skipping speech.");
-        }
+      // Update conversation history and send to LLM
+      setConversationHistory((prevHistory) => {
+        const updatedHistory = [
+          ...prevHistory,
+          { role: "user", content: text },
+        ];
+  
+        // Call sendToLLM after updating the history
+        sendToLLM(updatedHistory, apiEndpoint, conversationId)
+          .then((llmResponse) => {
+            if (llmResponse) {
+              setConversationHistory((currentHistory) => [
+                ...currentHistory,
+                { role: "assistant", content: llmResponse },
+              ]);
+              speak(llmResponse);
+            } else {
+              console.warn("LLM response was undefined. Skipping speech.");
+            }
+          })
+          .catch((error) => {
+            console.error("Error sending to LLM:", error);
+            alert("Error processing your request. Please try again.");
+          });
+  
+        return updatedHistory; // Return the updated history
+      });
       
     } catch (error) {
       console.error("Error handling speech recognition result:", error);
@@ -458,7 +463,7 @@ const handleSummaryCancel = () => {
 
   while (retries < maxRetries) {
     try {
-      const url = `${API_BASE_URL}/api/process`; // Make sure to change this if in educational mode
+      const url = `${API_BASE_URL}${apiEndpoint}`; // Use the correct apiEndpoint here
       console.log("Sending POST request to:", url);
 
       const response = await fetch(url, {
@@ -519,10 +524,8 @@ const handleSummaryCancel = () => {
 
   useEffect(() => {
     const sendToLLMAfterConversationIdUpdate = async () => {
-      // No need to check currentConversationId here since it is now a dependency
-      // and this useEffect will only run when it is updated
-      if (conversationHistory.length > 0) {
-        let apiEndpoint = showEducationalContent ? "/api/learn" : "/api/process";
+      if (conversationHistory.length > 0 && currentConversationId) {
+        let apiEndpoint = showEducationalContent ? "/api/learn/" : "/api/process/";
         const llmResponse = await sendToLLM(
           conversationHistory,
           apiEndpoint,
@@ -542,7 +545,7 @@ const handleSummaryCancel = () => {
     };
   
     sendToLLMAfterConversationIdUpdate();
-  }, [currentConversationId]); // Remove conversationHistory from dependencies
+  }, [currentConversationId, conversationHistory]); // Add currentConversationId to the dependency array
 
 
   const speak = async (text) => {
