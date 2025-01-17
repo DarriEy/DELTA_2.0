@@ -346,7 +346,7 @@ async def process_input(
         )
 
         # Generate and await LLM response
-        llm_response = generate_response(user_input)  # Await the response
+        llm_response = await generate_response(user_input)  # Await the response
 
         # Ensure llm_response is a string before storing in database
         if not isinstance(llm_response, str):
