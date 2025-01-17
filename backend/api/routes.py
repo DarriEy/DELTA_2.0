@@ -234,13 +234,10 @@ def create_conversation(
     print("Conversation as dict:", conversation.dict())
     try:
         db_conversation = DBConversation(**conversation.dict())
-        print("Creating DBConversation object:", db_conversation)
         db.add(db_conversation)
         db.flush()
-        #db.refresh(db_conversation)
-        print("Conversation object after refresh:", db_conversation)
         db.commit()
-        return db_conversation
+        return {"conversation_id": db_conversation.id} #Return the id here
     except Exception as e:
         db.rollback()
         print(f"Error creating conversation: {e}")
