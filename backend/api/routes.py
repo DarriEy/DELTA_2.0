@@ -275,7 +275,7 @@ def update_conversation(
     return conversation
 
 
-@router.get("/summary/{conversation_id}")
+@router.get("/summary/{conversation_id}")  # Ensure it's a GET route
 async def get_summary(conversation_id: int, db: Session = Depends(get_db)):
     # Fetch conversation messages
     messages = (
