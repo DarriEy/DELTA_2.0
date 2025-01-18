@@ -422,3 +422,13 @@ async def text_to_speech(request: Request):
         print(f"Error in /api/tts endpoint: {e}")  # Print the error to console
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.options("/api/tts")
+async def options_tts():
+    return Response(
+        status_code=204,
+        headers={
+            "Access-Control-Allow-Origin": "https://delta-h-frontend-b338f294b004.herokuapp.com",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type",
+        },
+    )

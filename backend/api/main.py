@@ -120,9 +120,9 @@ async def shutdown_event():
 async def handle_options_request(request: Request, full_path: str):
     return Response(status_code=204, headers={
         "Access-Control-Allow-Origin": "https://delta-h-frontend-b338f294b004.herokuapp.com", # Update this to "*" if you want to allow all origins
-        "Access-Control-Allow-Methods": "POST, GET, OPTIONS, PUT, DELETE",
-        "Access-Control-Allow-Headers": "Content-Type",
-        "Access-Control-Max-Age": "86400"
+        "Access-Control-Allow-Methods": "POST, GET, OPTIONS, PUT, DELETE", # Allow all methods you use
+        "Access-Control-Allow-Headers": "Content-Type", # Allow necessary headers
+        "Access-Control-Max-Age": "86400" # Cache preflight response for 1 day
     })
 
 
