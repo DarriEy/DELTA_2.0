@@ -23,6 +23,8 @@ requests
 bs4
 asyncpg
 google-generativeai
-google-cloud-texttospeech
 google-auth
 google-cloud-storage
+google-cloud-texttospeech>=2.12.0
+google-api-core>=2.11.0
+grpcio>=1.51.0

@@ -41,10 +41,10 @@ from typing import List  # Import List from typing
 from sqlalchemy.exc import IntegrityError
 import base64
 from google.cloud import texttospeech
+import grpc
 from google.oauth2 import service_account
 from google.cloud import storage
 import asyncio
-import google.api_core.transport.grpc
 from sqlalchemy.orm import Session
 import requests
 import logging
@@ -400,7 +400,7 @@ async def text_to_speech(request: Request):
         )
         
         # Create client with timeout
-        transport = google.api_core.transport.grpc.create_channel(
+        transport = grpc.create_channel(
             'texttospeech.googleapis.com:443',
             credentials=credentials,
             options=[('grpc.keepalive_timeout_ms', 10000)]  # 10 second timeout
