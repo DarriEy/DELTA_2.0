@@ -278,12 +278,12 @@ def update_conversation(
         for key, value in update_data.items():
             setattr(conversation, key, value)
 
-        db.commit()
+        db.commit() # Commit here
         db.refresh(conversation)
 
         print(f"Updated conversation: {conversation}")
 
-        return conversation
+        return conversation # Return the updated conversation object
 
     except Exception as e:
         db.rollback()
