@@ -193,7 +193,7 @@ const handleEndOfDay = async () => {
           console.log("Current conversation ID:", currentConversationId);
 
           const response = await fetch(
-              `${API_BASE_URL}/api/summary/${currentConversationId}/`,
+              `${API_BASE_URL}/api/summary/${currentConversationId}`,
               {
                   method: "GET", // Ensure method is GET
                   headers: {
