@@ -386,12 +386,12 @@ async def process_input(
         raise HTTPException(status_code=500, detail=str(e))
     
 
-@router.post("/api/tts")
+@router.post("/tts")  # Changed from "/api/tts"
 async def text_to_speech(request: Request):
     """Handles text-to-speech requests."""
     try:
-        # Add logging
         print("TTS endpoint called")
+        # Add logging
         
         data = await request.json()
         text = data.get("text")

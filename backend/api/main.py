@@ -38,8 +38,11 @@ app.add_middleware(
 
 load_dotenv()
 
-# Include the API router with the /api prefix
+# After including the router
 app.include_router(api_router, prefix="/api")
+print("Available routes:")
+for route in app.routes:
+    print(f"{route.methods} {route.path}")
 
 # Database URL from environment variable
 DATABASE_URL = os.environ.get("DATABASE_URL").replace("postgres://", "postgresql://", 1)
