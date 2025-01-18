@@ -377,6 +377,9 @@ const handleSummaryCancel = () => {
           return;
         }
         // No need to call setCurrentConversationId here anymore
+  
+        // Introduce a small delay
+        await new Promise((resolve) => setTimeout(resolve, 200)); // 200ms delay
       }
   
       // Update conversation history
@@ -394,8 +397,8 @@ const handleSummaryCancel = () => {
   
       // Send to LLM after updating history
       let apiEndpoint = showEducationalContent
-        ? "/api/learn/"
-        : "/api/process/";
+        ? "/api/learn"
+        : "/api/process";
   
       const llmResponse = await sendToLLM(
         [...conversationHistory, { role: "user", content: text }], // Pass updated history
@@ -511,7 +514,7 @@ const handleSummaryCancel = () => {
   useEffect(() => {
     const sendToLLMAfterConversationIdUpdate = async () => {
       if (conversationHistory.length > 0 && currentConversationId) {
-        let apiEndpoint = showEducationalContent ? "/api/learn/" : "/api/process/";
+        let apiEndpoint = showEducationalContent ? "/api/learn" : "/api/process";
         const llmResponse = await sendToLLM(
           conversationHistory,
           apiEndpoint,
