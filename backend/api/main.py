@@ -13,10 +13,10 @@ from .routes import router as api_router
 
 app = FastAPI(title="DELTA Orchestrator")
 
-# Configure CORS with proper URL formats
+# Configure CORS
 origins = [
-    "https://delta-h-frontend-b338f294b004.herokuapp.com",
-    "http://localhost:5173",
+    "delta-h-frontend-b338f294b004.herokuapp.com",  # Your frontend's URL
+    "http://localhost:5173",  # For local development
     "http://localhost:4173",
     "http://localhost:14525",
     "http://172.17.50.178:14525",
@@ -24,10 +24,10 @@ origins = [
     "http://172.17.98.82:17568"
 ]
 
-# Single CORS configuration
+# Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,  # Use the origins list instead of "*"
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -111,9 +111,9 @@ async def shutdown_event():
 async def handle_options_request(request: Request, full_path: str):
     return Response(status_code=204, headers={
         "Access-Control-Allow-Origin": "https://delta-h-frontend-b338f294b004.herokuapp.com", # Update this to "*" if you want to allow all origins
-        "Access-Control-Allow-Methods": "POST, GET, OPTIONS, PUT, DELETE", # Allow all methods you use
-        "Access-Control-Allow-Headers": "Content-Type", # Allow necessary headers
-        "Access-Control-Max-Age": "86400" # Cache preflight response for 1 day
+        "Access-Control-Allow-Methods": "POST, GET, OPTIONS, PUT, DELETE",
+        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Max-Age": "86400"
     })
 
 
