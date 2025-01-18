@@ -377,12 +377,16 @@ const handleSummaryCancel = () => {
         // No need to call setCurrentConversationId here anymore
       }
   
+      // Update conversation history
+      setConversationHistory((prevHistory) => [
+        ...prevHistory,
+        { role: "user", content: text },
+      ]);
+  
       // Check if currentConversationId is null
-      if (!currentConversationId) {
+      if (!conversationId) {
+        // If it's null, log an error and return
         console.error("Error: currentConversationId is null");
-        alert(
-          "Error: Conversation ID is null. Please try starting a new conversation."
-        );
         return;
       }
   
@@ -391,33 +395,12 @@ const handleSummaryCancel = () => {
         ? "/api/learn/"
         : "/api/process/";
   
-      // Update conversation history and send to LLM
-      setConversationHistory((prevHistory) => {
-        const updatedHistory = [
-          ...prevHistory,
-          { role: "user", content: text },
-        ];
-  
-        // Call sendToLLM after updating the history
-        sendToLLM(updatedHistory, apiEndpoint, conversationId)
-          .then((llmResponse) => {
-            if (llmResponse) {
-              setConversationHistory((currentHistory) => [
-                ...currentHistory,
-                { role: "assistant", content: llmResponse },
-              ]);
-              speak(llmResponse);
-            } else {
-              console.warn("LLM response was undefined. Skipping speech.");
-            }
-          })
-          .catch((error) => {
-            console.error("Error sending to LLM:", error);
-            alert("Error processing your request. Please try again.");
-          });
-  
-        return updatedHistory; // Return the updated history
-      });
+      const llmResponse = await sendToLLM(
+        [...conversationHistory, { role: "user", content: text }], // Pass updated history
+        apiEndpoint,
+        conversationId
+      );
+      
       
     } catch (error) {
       console.error("Error handling speech recognition result:", error);
