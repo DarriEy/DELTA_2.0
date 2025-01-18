@@ -43,7 +43,8 @@ import base64
 from google.cloud import texttospeech
 from google.oauth2 import service_account
 from google.cloud import storage
-
+import asyncio
+import google.api_core.transport.grpc
 from sqlalchemy.orm import Session
 import requests
 import logging
@@ -393,13 +394,19 @@ async def text_to_speech(request: Request):
         if not text:
             raise HTTPException(status_code=400, detail="No text provided")
 
-        # Initialize the Text-to-Speech client
+        # Add timeout handling for Google Cloud client
         credentials = service_account.Credentials.from_service_account_info(
             json.loads(os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"))
         )
-        tts_client = texttospeech.TextToSpeechClient(credentials=credentials)
+        
+        # Create client with timeout
+        transport = google.api_core.transport.grpc.create_channel(
+            'texttospeech.googleapis.com:443',
+            credentials=credentials,
+            options=[('grpc.keepalive_timeout_ms', 10000)]  # 10 second timeout
+        )
+        tts_client = texttospeech.TextToSpeechClient(transport=transport)
 
-        # Configure the TTS request
         synthesis_input = texttospeech.SynthesisInput(text=text)
         voice = texttospeech.VoiceSelectionParams(
             language_code="en-US", name="en-US-Polyglot-1"
@@ -408,27 +415,36 @@ async def text_to_speech(request: Request):
             audio_encoding=texttospeech.AudioEncoding.MP3
         )
 
-        # Perform the TTS request
-        response = tts_client.synthesize_speech(
-            input=synthesis_input, voice=voice, audio_config=audio_config
+        # Add timeout for synthesis request
+        response = await asyncio.wait_for(
+            tts_client.synthesize_speech(
+                input=synthesis_input, 
+                voice=voice, 
+                audio_config=audio_config
+            ),
+            timeout=15.0  # 15 second timeout
         )
 
-        # Return the audio content as a base64-encoded string
         audio_content = base64.b64encode(response.audio_content).decode("utf-8")
         return {"audioContent": audio_content}
 
+    except asyncio.TimeoutError:
+        log.error("TTS request timed out")
+        raise HTTPException(status_code=504, detail="TTS request timed out")
     except Exception as e:
         log.error(f"Error in /api/tts endpoint: {e}")
-        print(f"Error in /api/tts endpoint: {e}")  # Print the error to console
+        print(f"Error in /api/tts endpoint: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+    
 
 @router.options("/api/tts")
 async def options_tts():
     return Response(
-        status_code=204,
+        status_code=200,  # Changed from 204 to 200
         headers={
             "Access-Control-Allow-Origin": "https://delta-h-frontend-b338f294b004.herokuapp.com",
             "Access-Control-Allow-Methods": "POST, OPTIONS",
-            "Access-Control-Allow-Headers": "Content-Type",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization",  # Added Authorization
+            "Access-Control-Allow-Credentials": "true",  # Added this
         },
     )
