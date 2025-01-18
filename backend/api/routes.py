@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, status, Body, Request
+from fastapi import APIRouter, HTTPException, Depends, status, Body, Request, Response
 from .schemas import UserInput, ImagePrompt, ConversationCreate
 import yaml
 import json
@@ -368,7 +368,8 @@ async def process_input(
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
     
-@router.post("/api/tts")
+
+@router.post("/api/tts", methods=["POST", "OPTIONS"]) 
 async def text_to_speech(request: Request):
     """Handles text-to-speech requests."""
     try:
@@ -404,3 +405,11 @@ async def text_to_speech(request: Request):
     except Exception as e:
         log.error(f"Error in /api/tts endpoint: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+    
+@router.options("/api/tts")
+async def options_tts():
+    return Response(status_code=204, headers={
+        "Access-Control-Allow-Origin": "https://delta-h-frontend-b338f294b004.herokuapp.com",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type"
+    })
