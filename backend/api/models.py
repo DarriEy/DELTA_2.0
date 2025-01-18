@@ -60,7 +60,7 @@ class Message(Base):
 
     def __repr__(self):
         return f"<Message(id={self.message_id}, conversation_id={self.conversation_id}, sender={self.sender})>"
-
+    
 # Define the Model Config model
 class ModelConfig(Base):
     __tablename__ = "model_configs"
