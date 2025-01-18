@@ -241,7 +241,7 @@ const handleSummaryConfirm = async (finalSummary) => {
     );
 
     const response = await fetch(
-      `${API_BASE_URL}/api/conversations/${currentConversationId}/`, // Correct template literal
+      `${API_BASE_URL}/api/conversations/${currentConversationId}/`, // Ensure this URL is correct
       {
         method: "PUT",
         headers: {

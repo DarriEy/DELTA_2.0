@@ -260,19 +260,35 @@ def update_conversation(
     conversation_update: ConversationUpdate,
     db: Session = Depends(get_db),
 ):
-    # Fetch the existing conversation
-    conversation = db.query(DBConversation).get(conversation_id)
-    if conversation is None:
-        raise HTTPException(status_code=404, detail="Conversation not found")
+    print(f"Updating conversation with ID: {conversation_id}")
+    print(f"Received conversation update data: {conversation_update.dict()}")
 
-    # Update the conversation fields
-    update_data = conversation_update.dict(exclude_unset=True)
-    for key, value in update_data.items():
-        setattr(conversation, key, value)
+    try:
+        # Fetch the existing conversation
+        conversation = db.query(DBConversation).get(conversation_id)
 
-    db.refresh(conversation)
-    db.commit()
-    return conversation
+        print(f"Found conversation: {conversation}")
+
+        if conversation is None:
+            print(f"Conversation not found for ID: {conversation_id}")
+            raise HTTPException(status_code=404, detail="Conversation not found")
+
+        # Update the conversation fields
+        update_data = conversation_update.dict(exclude_unset=True)
+        for key, value in update_data.items():
+            setattr(conversation, key, value)
+
+        db.commit()
+        db.refresh(conversation)
+
+        print(f"Updated conversation: {conversation}")
+
+        return conversation
+
+    except Exception as e:
+        db.rollback()
+        print(f"Error updating conversation: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/summary/{conversation_id}")  # Ensure it's a GET route
