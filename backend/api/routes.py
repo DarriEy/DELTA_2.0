@@ -400,12 +400,12 @@ async def text_to_speech(request: Request):
 
         text = data.get("text")
         print(f"Received text: {text}")
-        
+
         if not text:
             raise HTTPException(status_code=400, detail="No text provided")
 
         # Load credentials from environment variable
-        creds_info = json.loads(os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"))
+        creds_info = json.loads(os.environ.get("GOOGLE_APPLICATION_JSON"))
         credentials = service_account.Credentials.from_service_account_info(creds_info)
 
         # Initialize client with error handling
