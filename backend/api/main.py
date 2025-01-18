@@ -7,7 +7,7 @@ from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker
 from dotenv import load_dotenv
 
-from .models import Base, DBUser
+from .models import Base, User as DBUser
 from .routes import router as api_router
 
 load_dotenv()
