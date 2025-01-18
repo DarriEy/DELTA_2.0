@@ -1,21 +1,22 @@
+import os
+
+import bcrypt
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker
-from .models import Base, User as DBUser
 from dotenv import load_dotenv
-import os
-import bcrypt
-import httpx
+
+from .models import Base, DBUser
 from .routes import router as api_router
 
-
+load_dotenv()
 
 app = FastAPI(title="DELTA Orchestrator")
 
 # Configure CORS
 origins = [
-    "delta-h-frontend-b338f294b004.herokuapp.com",  # Your frontend's URL
+    "https://delta-h-frontend-b338f294b004.herokuapp.com",  # Your frontend's URL
     "http://localhost:5173",  # For local development
     "http://localhost:4173",
     "http://localhost:14525",
@@ -24,28 +25,28 @@ origins = [
     "http://172.17.98.82:17568"
 ]
 
-# Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://delta-h-frontend-b338f294b004.herokuapp.com"],  # Be specific with the origin
+    allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS", "PUT", "DELETE"],
+    allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["*"],
-    max_age=3600,
 )
 
-
-load_dotenv()
-
-# After including the router
-app.include_router(api_router, prefix="/api")
-print("Available routes:")
-for route in app.routes:
-    print(f"{route.methods} {route.path}")
+# Add this OPTIONS handler before including the router
+@app.options("/{full_path:path}")
+async def handle_options_request(request: Request, full_path: str):
+    return Response(status_code=204, headers={
+        "Access-Control-Allow-Origin": "https://delta-h-frontend-b338f294b004.herokuapp.com", # Update this to "*" if you want to allow all origins
+        "Access-Control-Allow-Methods": "POST, GET, OPTIONS, PUT, DELETE", # Allow all methods you use
+        "Access-Control-Allow-Headers": "Content-Type", # Allow necessary headers
+        "Access-Control-Max-Age": "86400" # Cache preflight response for 1 day
+    })
 
 # Database URL from environment variable
-DATABASE_URL = os.environ.get("DATABASE_URL").replace("postgres://", "postgresql://", 1)
+DATABASE_URL = os.environ.get("DATABASE_URL").replace(
+    "postgres://", "postgresql://", 1
+)
 
 # Sync engine and session
 engine = create_engine(DATABASE_URL, echo=False)
@@ -60,6 +61,7 @@ def get_db():
         yield db
     finally:
         db.close()
+
 
 def create_initial_user():
     db = SessionLocal()
@@ -89,9 +91,9 @@ def create_initial_user():
     finally:
         db.close()
 
+
 @app.on_event("startup")
 async def startup_event():
-    app.state.httpx_client = httpx.AsyncClient()
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/app/google-credentials.json"
     print("GOOGLE_APPLICATION_CREDENTIALS:", os.environ["GOOGLE_APPLICATION_CREDENTIALS"])
     print("DELTA Backend Started")
@@ -108,18 +110,8 @@ async def startup_event():
     create_initial_user()
 
 
-@app.on_event("shutdown")
-async def shutdown_event():
-    await app.state.httpx_client.aclose()
-
-@app.options("/{full_path:path}")
-async def handle_options_request(request: Request, full_path: str):
-    return Response(status_code=204, headers={
-        "Access-Control-Allow-Origin": "*", # Update this to "*" if you want to allow all origins
-        "Access-Control-Allow-Methods": "POST, GET, OPTIONS, PUT, DELETE",
-        "Access-Control-Allow-Headers": "Content-Type",
-        "Access-Control-Max-Age": "86400"
-    })
+# Include the API router with the /api prefix
+app.include_router(api_router, prefix="/api")
 
 
 @app.get("/")
