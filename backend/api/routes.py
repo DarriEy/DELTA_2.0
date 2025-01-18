@@ -426,14 +426,14 @@ async def text_to_speech(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
     
 
-@router.options("/api/tts")
-async def options_tts():
+@router.options("/summary/{conversation_id}")
+async def options_summary(conversation_id: int):
     return Response(
-        status_code=200,  # Changed from 204 to 200
+        status_code=200,
         headers={
             "Access-Control-Allow-Origin": "https://delta-h-frontend-b338f294b004.herokuapp.com",
-            "Access-Control-Allow-Methods": "POST, OPTIONS",
-            "Access-Control-Allow-Headers": "Content-Type, Authorization",  # Added Authorization
-            "Access-Control-Allow-Credentials": "true",  # Added this
+            "Access-Control-Allow-Methods": "GET, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization",
+            "Access-Control-Allow-Credentials": "true",
         },
     )
