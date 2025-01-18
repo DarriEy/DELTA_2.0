@@ -369,7 +369,7 @@ async def process_input(
         raise HTTPException(status_code=500, detail=str(e))
     
 
-@router.post("/api/tts", methods=["POST", "OPTIONS"]) 
+@router.post("/api/tts") 
 async def text_to_speech(request: Request):
     """Handles text-to-speech requests."""
     try:
