@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException, Depends, status, Body, Request, Response, JSONResponse
+from fastapi import APIRouter, HTTPException, Depends, status, Body, Request, Response
+from fastapi.responses import JSONResponse
 from .schemas import UserInput, ImagePrompt, ConversationCreate
 import yaml
 import json
