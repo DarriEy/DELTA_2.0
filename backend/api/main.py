@@ -24,15 +24,20 @@ origins = [
     "http://172.17.98.82:17568"
 ]
 
+# Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+
 load_dotenv()
+
+# Include the API router with the /api prefix
+app.include_router(api_router, prefix="/api")
 
 # Database URL from environment variable
 DATABASE_URL = os.environ.get("DATABASE_URL").replace("postgres://", "postgresql://", 1)
@@ -112,17 +117,7 @@ async def shutdown_event():
     await app.state.httpx_client.aclose()
 
 
-@app.options("/{full_path:path}")
-async def handle_options_request(request: Request, full_path: str):
-    return Response(status_code=204, headers={
-        "Access-Control-Allow-Origin": "https://delta-h-frontend-b338f294b004.herokuapp.com",
-        "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
-        "Access-Control-Max-Age": "86400"
-    })
 
-# Include the API router with the /api prefix
-app.include_router(api_router, prefix="/api")
 
 @app.get("/")
 async def root():
