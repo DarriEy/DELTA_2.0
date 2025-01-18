@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, status, Body
+from fastapi import APIRouter, HTTPException, Depends, status, Body, Request
 from .schemas import UserInput, ImagePrompt, ConversationCreate
 import yaml
 import json
@@ -39,11 +39,15 @@ from .llm_integration import (
 import bcrypt
 from typing import List  # Import List from typing
 from sqlalchemy.exc import IntegrityError
+import base64
+from google.cloud import texttospeech
+from google.oauth2 import service_account
+from google.cloud import storage
 
 from sqlalchemy.orm import Session
-
+import requests
 import logging
-
+import os
 import requests
 from bs4 import BeautifulSoup
 
@@ -362,4 +366,41 @@ async def process_input(
     except Exception as e:
         log.error(f"Error in process_input: {e}")
         db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@router.post("/api/tts")
+async def text_to_speech(request: Request):
+    """Handles text-to-speech requests."""
+    try:
+        data = await request.json()
+        text = data.get("text")
+        if not text:
+            raise HTTPException(status_code=400, detail="No text provided")
+
+        # Initialize the Text-to-Speech client
+        credentials = service_account.Credentials.from_service_account_info(
+            json.loads(os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"))
+        )
+        tts_client = texttospeech.TextToSpeechClient(credentials=credentials)
+
+        # Configure the TTS request
+        synthesis_input = texttospeech.SynthesisInput(text=text)
+        voice = texttospeech.VoiceSelectionParams(
+            language_code="en-US", name="en-US-Polyglot-1"
+        )
+        audio_config = texttospeech.AudioConfig(
+            audio_encoding=texttospeech.AudioEncoding.MP3
+        )
+
+        # Perform the TTS request
+        response = tts_client.synthesize_speech(
+            input=synthesis_input, voice=voice, audio_config=audio_config
+        )
+
+        # Return the audio content as a base64-encoded string
+        audio_content = base64.b64encode(response.audio_content).decode("utf-8")
+        return {"audioContent": audio_content}
+
+    except Exception as e:
+        log.error(f"Error in /api/tts endpoint: {e}")
         raise HTTPException(status_code=500, detail=str(e))
