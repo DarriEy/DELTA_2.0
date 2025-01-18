@@ -148,7 +148,7 @@ const AnimatedAvatar = () => {
 const generateGeneralBackgroundImage = async () => {
   await new Promise((resolve) => setTimeout(resolve, 3000));
   const imagePrompt =
-  "Please, render a highly detailed photorealistic yet otherworldly, 4K image of a natural landscape showcasing a beautiful hydrological landscape feature. The setting should be a breathtaking natural environment. Emphasize realistic lighting, textures, and reflections in the water. Style should render with sharp focus and intricate details. Use a 16:9 aspect ratio.";
+  "Please, render a highly detailed photorealistic, 4K image of a natural landscape showcasing a beautiful hydrological landscape feature. The setting should be a breathtaking natural environment. Emphasize realistic lighting, textures, and reflections in the water. Style should render with sharp focus and intricate details. Use a 16:9 aspect ratio.";
   try {
   setIsLoading(true); // Start loading
   const imageUrl = await generateImageFromPrompt(imagePrompt);
@@ -652,7 +652,7 @@ const handleSummaryCancel = () => {
         }
       } else if (activeMode === "modeling") {
         const imagePrompt =
-          "Please create a photorealistic image of the interior of an advanced hydrological monitoring space, rendered in 8K resolution with a 16:9 aspect ratio. The environment should evoke the feeling of being in a futuristic spaceship cockpit, without explicitly showing any spaceship elements.  Design the space with sleek, curved consoles, and large, high-resolution screens displaying complex hydrological models, real-time data streams, and dynamic 3D visualizations of water flow. Incorporate holographic projections of watersheds and river basins. The lighting should be a mix of soft, ambient glows from the screens and subtle, strategic accent lighting along the consoles. The overall atmosphere should be high-tech, immersive, and focused, as if in a command center for monitoring and analyzing complex environmental systems.";
+          "Please create a photorealistic image of the interior of an advanced hydrological monitoring space, rendered in 8K resolution with a 16:9 aspect ratio. The environment should evoke the feeling of being in a futuristic spaceship cockpit, without explicitly showing any spaceship elements.  Design the space with sleek, curved consoles, and large, high-resolution screens displaying complex hydrological models, real-time data streams, and dynamic 3D visualizations of water flow. Incorporate projections of watersheds and river basins. The lighting should be a mix of soft, ambient glows from the screens and subtle, strategic accent lighting along the consoles. The overall atmosphere should be high-tech, immersive, and focused, as if in a command center for monitoring and analyzing complex environmental systems.";
         try {
           setIsLoading(true);
           const imageUrl = await generateImageFromPrompt(imagePrompt);

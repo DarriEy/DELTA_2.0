@@ -2,32 +2,26 @@ const API_BASE_URL = 'https://delta-h-7344a1b27b42.herokuapp.com' //import.meta.
 
 console.log("API_BASE_URL in services:", API_BASE_URL);
 
-// services.js
-export const generateSpeechFromText = async (text) => {
-  try {
-    const response = await fetch("http://localhost:3001/api/tts", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ text }),
-    });
+export async function generateSpeechFromText(text) {
+  console.log("Text to be spoken:", text);
+  const response = await fetch(`${API_BASE_URL}/api/tts`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ text }),
+  });
+  console.log("TTS response status:", response.status); // Log the status code
 
-    console.log("TTS response status:", response.status);
-
-    if (!response.ok) {
-      const errorBody = await response.text();
-      console.error("TTS error body:", errorBody);
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
+  if (response.ok) {
     const data = await response.json();
     return data.audioContent;
-  } catch (error) {
-    console.error("Error during text-to-speech:", error);
-    throw error; // Re-throw to be handled by the caller
+  } else {
+    const errorBody = await response.text();
+    console.error("Error body:", errorBody);
+    throw new Error(`HTTP error! status: ${response.status}`);
   }
-};
+}
 
 export const generateImageFromPrompt = async (prompt) => {
   try {
