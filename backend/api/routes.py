@@ -388,31 +388,15 @@ async def process_input(
 
 @router.post("/tts")  # Changed from "/api/tts"
 async def text_to_speech(request: Request):
-    """Handles text-to-speech requests."""
     try:
-        print("TTS endpoint called")
-        # Add logging
-        
         data = await request.json()
         text = data.get("text")
-        print(f"Received text: {text}")
-        
         if not text:
             raise HTTPException(status_code=400, detail="No text provided")
 
-        # Verify credentials are loaded
-        credentials_json = os.environ.get("GOOGLE_APPLICATION_JSON")
-        if not credentials_json:
-            print("Error: GOOGLE_APPLICATION_CREDENTIALS not found in environment")
-            raise HTTPException(status_code=500, detail="Google credentials not configured")
-
-        try:
-            credentials = service_account.Credentials.from_service_account_info(
-                json.loads(credentials_json)
-            )
-        except Exception as e:
-            print(f"Error loading credentials: {e}")
-            raise HTTPException(status_code=500, detail="Failed to load Google credentials")
+        # Load credentials from environment variable
+        creds_info = json.loads(os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"))
+        credentials = service_account.Credentials.from_service_account_info(creds_info)
 
         # Initialize client with error handling
         try:
