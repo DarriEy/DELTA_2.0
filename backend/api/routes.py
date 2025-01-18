@@ -389,68 +389,49 @@ async def process_input(
 @router.post("/tts")  # Changed from "/api/tts"
 async def text_to_speech(request: Request):
     """Handles text-to-speech requests."""
+    print("TTS endpoint called")
     try:
         data = await request.json()
         text = data.get("text")
+        print(f"Received text: {text}")
         if not text:
             raise HTTPException(status_code=400, detail="No text provided")
 
-        # Use the path to the credentials file directly
-        credentials_path = "/app/google-credentials.json"
-        credentials = service_account.Credentials.from_service_account_file(credentials_path)
-
-
-
-        # Initialize client with error handling
+        # Load credentials from environment variable
         try:
-            client = texttospeech.TextToSpeechClient(credentials=credentials)
-        except Exception as e:
-            print(f"Error initializing TTS client: {e}")
-            raise HTTPException(status_code=500, detail="Failed to initialize TTS client")
+            creds_info = json.loads(os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"))
+        except json.JSONDecodeError as e:
+            print(f"Error decoding credentials: {e}")
+            raise HTTPException(
+                status_code=500, detail="Failed to load Google credentials"
+            )
 
-        # Configure the synthesis
+        credentials = service_account.Credentials.from_service_account_info(creds_info)
+
+        # Initialize the Text-to-Speech client
+        tts_client = texttospeech.TextToSpeechClient(credentials=credentials)
+
+        # Configure the TTS request
         synthesis_input = texttospeech.SynthesisInput(text=text)
         voice = texttospeech.VoiceSelectionParams(
-            language_code="en-US",
-            name="en-US-Standard-C"  # Changed to a standard voice
+            language_code="en-US", name="en-US-Polyglot-1"
         )
         audio_config = texttospeech.AudioConfig(
-            audio_encoding=texttospeech.AudioEncoding.MP3,
-            speaking_rate=1.0,
-            pitch=0.0
+            audio_encoding=texttospeech.AudioEncoding.MP3
         )
 
-        # Make the request with timeout
-        try:
-            response = await asyncio.wait_for(
-                client.synthesize_speech(
-                    input=synthesis_input,
-                    voice=voice,
-                    audio_config=audio_config
-                ),
-                timeout=15.0
-            )
-            print("TTS request successful")
-            
-            audio_content = base64.b64encode(response.audio_content).decode("utf-8")
-            return JSONResponse(
-                content={"audioContent": audio_content},
-                headers={
-                    "Access-Control-Allow-Origin": "https://delta-h-frontend-b338f294b004.herokuapp.com",
-                    "Access-Control-Allow-Credentials": "true",
-                }
-            )
-        except asyncio.TimeoutError:
-            print("TTS request timed out")
-            raise HTTPException(status_code=504, detail="TTS request timed out")
-        except Exception as e:
-            print(f"Error in TTS synthesis: {e}")
-            raise HTTPException(status_code=500, detail=f"TTS synthesis failed: {str(e)}")
+        # Perform the TTS request synchronously
+        response = tts_client.synthesize_speech(
+            input=synthesis_input, voice=voice, audio_config=audio_config
+        )
 
-    except HTTPException as he:
-        raise he
+        # Return the audio content as a base64-encoded string
+        audio_content = base64.b64encode(response.audio_content).decode("utf-8")
+        return {"audioContent": audio_content}
+
     except Exception as e:
-        print(f"Unexpected error in TTS endpoint: {e}")
+        log.error(f"Error in /api/tts endpoint: {e}")
+        print(f"Error in /api/tts endpoint: {e}")  # Print the error to console
         raise HTTPException(status_code=500, detail=str(e))
     
 
