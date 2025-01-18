@@ -23,3 +23,6 @@ requests
 bs4
 asyncpg
 google-generativeai
+google-cloud-texttospeech
+google-auth
+google-cloud-storage
