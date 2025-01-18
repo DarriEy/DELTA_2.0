@@ -369,7 +369,7 @@ async def process_input(
         raise HTTPException(status_code=500, detail=str(e))
     
 
-@router.post("/api/tts") 
+@router.post("/api/tts")  # This decorator handles POST requests
 async def text_to_speech(request: Request):
     """Handles text-to-speech requests."""
     try:
@@ -404,9 +404,10 @@ async def text_to_speech(request: Request):
 
     except Exception as e:
         log.error(f"Error in /api/tts endpoint: {e}")
+        print(f"Error in /api/tts endpoint: {e}")  # Print the error to console
         raise HTTPException(status_code=500, detail=str(e))
-    
-@router.options("/api/tts")
+
+@router.options("/api/tts") # This decorator handles OPTIONS requests
 async def options_tts():
     return Response(status_code=204, headers={
         "Access-Control-Allow-Origin": "https://delta-h-frontend-b338f294b004.herokuapp.com",
