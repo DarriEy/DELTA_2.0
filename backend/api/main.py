@@ -110,7 +110,7 @@ async def shutdown_event():
 @app.options("/{full_path:path}")
 async def handle_options_request(request: Request, full_path: str):
     return Response(status_code=204, headers={
-        "Access-Control-Allow-Origin": "https://delta-h-frontend-b338f294b004.herokuapp.com", # Update this to "*" if you want to allow all origins
+        "Access-Control-Allow-Origin": "*", # Update this to "*" if you want to allow all origins
         "Access-Control-Allow-Methods": "POST, GET, OPTIONS, PUT, DELETE",
         "Access-Control-Allow-Headers": "Content-Type",
         "Access-Control-Max-Age": "86400"
