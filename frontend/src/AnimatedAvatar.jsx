@@ -108,6 +108,7 @@ const AnimatedAvatar = () => {
       const userId = 1; // Replace with actual user ID
       const response = await fetch(`${API_BASE_URL}/api/conversations/`, {
         method: "POST",
+        credentials: 'include',  // Add this
         headers: {
           "Content-Type": "application/json",
         },
@@ -319,6 +320,7 @@ const handleSummaryCancel = () => {
       // Make an API request to the backend to run CONFLUENCE
       const response = await fetch(`${API_BASE_URL}/api/run_confluence`, {
         method: "POST",
+        credentials: 'include',  // Add this
         headers: {
           "Content-Type": "application/json",
         },
@@ -400,7 +402,7 @@ const handleSummaryCancel = () => {
         apiEndpoint,
         conversationId
       );
-      
+
       
     } catch (error) {
       console.error("Error handling speech recognition result:", error);
@@ -451,6 +453,7 @@ const handleSummaryCancel = () => {
 
       const response = await fetch(url, {
         method: "POST",
+        credentials: 'include',  // Add this
         headers: {
           "Content-Type": "application/json",
         },

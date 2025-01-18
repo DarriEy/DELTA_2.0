@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, status, Body, Request, Response
+from fastapi import APIRouter, HTTPException, Depends, status, Body, Request, Response, JSONResponse
 from .schemas import UserInput, ImagePrompt, ConversationCreate
 import yaml
 import json
@@ -389,51 +389,80 @@ async def process_input(
 async def text_to_speech(request: Request):
     """Handles text-to-speech requests."""
     try:
+        # Add logging
+        print("TTS endpoint called")
+        
         data = await request.json()
         text = data.get("text")
+        print(f"Received text: {text}")
+        
         if not text:
             raise HTTPException(status_code=400, detail="No text provided")
 
-        # Add timeout handling for Google Cloud client
-        credentials = service_account.Credentials.from_service_account_info(
-            json.loads(os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"))
-        )
-        
-        # Create client with timeout
-        transport = grpc.create_channel(
-            'texttospeech.googleapis.com:443',
-            credentials=credentials,
-            options=[('grpc.keepalive_timeout_ms', 10000)]  # 10 second timeout
-        )
-        tts_client = texttospeech.TextToSpeechClient(transport=transport)
+        # Verify credentials are loaded
+        credentials_json = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+        if not credentials_json:
+            print("Error: GOOGLE_APPLICATION_CREDENTIALS not found in environment")
+            raise HTTPException(status_code=500, detail="Google credentials not configured")
 
+        try:
+            credentials = service_account.Credentials.from_service_account_info(
+                json.loads(credentials_json)
+            )
+        except Exception as e:
+            print(f"Error loading credentials: {e}")
+            raise HTTPException(status_code=500, detail="Failed to load Google credentials")
+
+        # Initialize client with error handling
+        try:
+            client = texttospeech.TextToSpeechClient(credentials=credentials)
+        except Exception as e:
+            print(f"Error initializing TTS client: {e}")
+            raise HTTPException(status_code=500, detail="Failed to initialize TTS client")
+
+        # Configure the synthesis
         synthesis_input = texttospeech.SynthesisInput(text=text)
         voice = texttospeech.VoiceSelectionParams(
-            language_code="en-US", name="en-US-Polyglot-1"
+            language_code="en-US",
+            name="en-US-Standard-C"  # Changed to a standard voice
         )
         audio_config = texttospeech.AudioConfig(
-            audio_encoding=texttospeech.AudioEncoding.MP3
+            audio_encoding=texttospeech.AudioEncoding.MP3,
+            speaking_rate=1.0,
+            pitch=0.0
         )
 
-        # Add timeout for synthesis request
-        response = await asyncio.wait_for(
-            tts_client.synthesize_speech(
-                input=synthesis_input, 
-                voice=voice, 
-                audio_config=audio_config
-            ),
-            timeout=15.0  # 15 second timeout
-        )
+        # Make the request with timeout
+        try:
+            response = await asyncio.wait_for(
+                client.synthesize_speech(
+                    input=synthesis_input,
+                    voice=voice,
+                    audio_config=audio_config
+                ),
+                timeout=15.0
+            )
+            print("TTS request successful")
+            
+            audio_content = base64.b64encode(response.audio_content).decode("utf-8")
+            return JSONResponse(
+                content={"audioContent": audio_content},
+                headers={
+                    "Access-Control-Allow-Origin": "https://delta-h-frontend-b338f294b004.herokuapp.com",
+                    "Access-Control-Allow-Credentials": "true",
+                }
+            )
+        except asyncio.TimeoutError:
+            print("TTS request timed out")
+            raise HTTPException(status_code=504, detail="TTS request timed out")
+        except Exception as e:
+            print(f"Error in TTS synthesis: {e}")
+            raise HTTPException(status_code=500, detail=f"TTS synthesis failed: {str(e)}")
 
-        audio_content = base64.b64encode(response.audio_content).decode("utf-8")
-        return {"audioContent": audio_content}
-
-    except asyncio.TimeoutError:
-        log.error("TTS request timed out")
-        raise HTTPException(status_code=504, detail="TTS request timed out")
+    except HTTPException as he:
+        raise he
     except Exception as e:
-        log.error(f"Error in /api/tts endpoint: {e}")
-        print(f"Error in /api/tts endpoint: {e}")
+        print(f"Unexpected error in TTS endpoint: {e}")
         raise HTTPException(status_code=500, detail=str(e))
     
 
