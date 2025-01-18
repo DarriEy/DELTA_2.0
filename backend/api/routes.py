@@ -401,7 +401,7 @@ async def text_to_speech(request: Request):
             raise HTTPException(status_code=400, detail="No text provided")
 
         # Verify credentials are loaded
-        credentials_json = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+        credentials_json = os.environ.get("GOOGLE_APPLICATION_JSON")
         if not credentials_json:
             print("Error: GOOGLE_APPLICATION_CREDENTIALS not found in environment")
             raise HTTPException(status_code=500, detail="Google credentials not configured")
