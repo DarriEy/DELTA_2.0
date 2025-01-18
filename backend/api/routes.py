@@ -388,9 +388,19 @@ async def process_input(
 
 @router.post("/tts")  # Changed from "/api/tts"
 async def text_to_speech(request: Request):
+    """Handles text-to-speech requests."""
     try:
-        data = await request.json()
+        print("TTS endpoint called")
+        try:
+            data = await request.json()
+        except json.JSONDecodeError as e:
+            print(f"JSON decoding error: {e}")
+            print(f"Response content: {await request.body()}") # Print the raw response content
+            raise HTTPException(status_code=400, detail="Invalid JSON body in request")
+
         text = data.get("text")
+        print(f"Received text: {text}")
+        
         if not text:
             raise HTTPException(status_code=400, detail="No text provided")
 
