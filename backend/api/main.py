@@ -9,7 +9,7 @@ import bcrypt
 import httpx
 from .routes import router as api_router
 
-load_dotenv()
+
 
 app = FastAPI(title="DELTA Orchestrator")
 
@@ -32,6 +32,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+load_dotenv()
+
 # Database URL from environment variable
 DATABASE_URL = os.environ.get("DATABASE_URL").replace("postgres://", "postgresql://", 1)
 
@@ -48,6 +50,15 @@ def get_db():
         yield db
     finally:
         db.close()
+
+@app.options("/{full_path:path}")
+async def handle_options_request(request: Request, full_path: str):
+    return Response(status_code=204, headers={
+        "Access-Control-Allow-Origin": "https://delta-h-frontend-b338f294b004.herokuapp.com", # Or "*" during development
+        "Access-Control-Allow-Methods": "POST, GET, OPTIONS, PUT, DELETE", # Allow all methods you use
+        "Access-Control-Allow-Headers": "Content-Type", # Allow necessary headers
+        "Access-Control-Max-Age": "86400" # Cache preflight response for 1 day
+    })
 
 def create_initial_user():
     db = SessionLocal()
