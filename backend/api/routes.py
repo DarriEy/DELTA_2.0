@@ -200,7 +200,7 @@ def create_conversation(
         db_conversation = DBConversation(**conversation.dict())
         print("Creating DBConversation object:", db_conversation)
         db.add(db_conversation)
-        db.commit()
+        db.flush()
         db.refresh(db_conversation) # Get the updated object from the database
         print("Conversation object after refresh:", db_conversation)
 
