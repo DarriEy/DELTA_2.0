@@ -15,7 +15,7 @@ app = FastAPI(title="DELTA Orchestrator")
 
 # Configure CORS
 origins = [
-    "https://delta-h-frontend-b338f294b004.herokuapp.com",  # Your frontend's URL
+    "delta-h-frontend-b338f294b004.herokuapp.com",  # Your frontend's URL
     "http://localhost:5173",  # For local development
     "http://localhost:4173",
     "http://localhost:14525",
@@ -116,7 +116,14 @@ async def startup_event():
 async def shutdown_event():
     await app.state.httpx_client.aclose()
 
-
+@app.options("/{full_path:path}")
+async def handle_options_request(request: Request, full_path: str):
+    return Response(status_code=204, headers={
+        "Access-Control-Allow-Origin": "https://delta-h-frontend-b338f294b004.herokuapp.com", # Update this to "*" if you want to allow all origins
+        "Access-Control-Allow-Methods": "POST, GET, OPTIONS, PUT, DELETE",
+        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Max-Age": "86400"
+    })
 
 
 @app.get("/")
