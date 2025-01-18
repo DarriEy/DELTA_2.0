@@ -4,7 +4,7 @@ console.log("API_BASE_URL in services:", API_BASE_URL);
 
 export async function generateSpeechFromText(text) {
   console.log("Text to be spoken:", text);
-  const response = await fetch(`${API_BASE_URL}/api/tts`, {
+  const response = await fetch(`${API_BASE_URL}/api/tts`, { // Use API_BASE_URL
     method: "POST",
     headers: {
       "Content-Type": "application/json",
