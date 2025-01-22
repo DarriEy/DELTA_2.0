@@ -358,17 +358,10 @@ const handleSummaryCancel = () => {
     setIsTalking(true);
     setIsLoading(true);
   
-    const updatedHistory = [
-      ...conversationHistory,
-      { role: "user", content: text },
-    ];
-    setConversationHistory(updatedHistory);
-  
     try {
       let conversationId = currentConversationId;
   
       if (!conversationId) {
-        // Await the creation and state update
         conversationId = await createNewConversation(activeMode);
   
         if (!conversationId) {
@@ -376,37 +369,33 @@ const handleSummaryCancel = () => {
           alert("Failed to start a new conversation. Please try again.");
           return;
         }
-        // No need to call setCurrentConversationId here anymore
   
-        // Introduce a small delay
-        await new Promise((resolve) => setTimeout(resolve, 200)); // 200ms delay
+        await new Promise((resolve) => setTimeout(resolve, 200)); // Small delay
       }
   
-      // Update conversation history
-      setConversationHistory((prevHistory) => [
-        ...prevHistory,
-        { role: "user", content: text },
-      ]);
+      // Update conversation history with user message
+      const updatedUserHistory = [...conversationHistory, { role: "user", content: text }];
+      setConversationHistory(updatedUserHistory);
   
-      // Check if currentConversationId is null
       if (!conversationId) {
-        // If it's null, log an error and return
         console.error("Error: currentConversationId is null");
         return;
       }
   
-      // Send to LLM after updating history
-      let apiEndpoint = showEducationalContent
-        ? "/api/learn"
-        : "/api/process";
+      // Determine API endpoint based on mode
+      let apiEndpoint = showEducationalContent ? "/api/learn" : "/api/process";
   
-      const llmResponse = await sendToLLM(
-        [...conversationHistory, { role: "user", content: text }], // Pass updated history
-        apiEndpoint,
-        conversationId
-      );
-
-      
+      // Send to LLM using updated history and conversation ID
+      const llmResponse = await sendToLLM(updatedUserHistory, apiEndpoint, conversationId);
+  
+      // Update conversation history with LLM response
+      if (llmResponse) {
+        const updatedAssistantHistory = [...updatedUserHistory, { role: "assistant", content: llmResponse }];
+        setConversationHistory(updatedAssistantHistory);
+        await speak(llmResponse); // Speak the LLM response
+      } else {
+        console.warn("LLM response was undefined. Skipping speech.");
+      }
     } catch (error) {
       console.error("Error handling speech recognition result:", error);
       alert("Error processing your request. Please try again.");
@@ -511,7 +500,7 @@ const handleSummaryCancel = () => {
     return fullResponse;
   };
 
-  useEffect(() => {
+ /*useEffect(() => {
     const sendToLLMAfterConversationIdUpdate = async () => {
       if (conversationHistory.length > 0 && currentConversationId) {
         let apiEndpoint = showEducationalContent ? "/api/learn" : "/api/process";
@@ -535,7 +524,7 @@ const handleSummaryCancel = () => {
   
     sendToLLMAfterConversationIdUpdate();
   }, [currentConversationId, conversationHistory]); // Add currentConversationId to the dependency array
-
+*/
 
   const speak = async (text) => {
     try {
