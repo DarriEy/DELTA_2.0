@@ -7,10 +7,23 @@ import os
 load_dotenv()
 
 # Database Configuration
-DATABASE_URL = os.environ.get("DATABASE_URL").replace("postgres://", "postgresql://", 1)
+raw_db_url = os.environ.get("DATABASE_URL")
+if not raw_db_url:
+    DATABASE_URL = "sqlite:///./fallback.db"
+else:
+    DATABASE_URL = raw_db_url.replace("postgres://", "postgresql://", 1)
 
-engine = create_engine(DATABASE_URL, echo=True)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+try:
+    if "postgresql" in DATABASE_URL:
+        engine = create_engine(DATABASE_URL, echo=True, connect_args={"connect_timeout": 10})
+    else:
+        engine = create_engine(DATABASE_URL, echo=True)
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+except Exception as e:
+    print(f"Failed to create engine in models.py: {e}")
+    # Define a dummy SessionLocal to prevent import errors
+    SessionLocal = sessionmaker(bind=None)
+
 
 Base = declarative_base()
 
