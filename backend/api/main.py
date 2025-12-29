@@ -61,7 +61,12 @@ else:
 # Sync engine and session
 # Add timeout to prevent hanging if DB is unreachable
 try:
-    engine = create_engine(DATABASE_URL, echo=False, connect_args={"connect_timeout": 10})
+    if "postgresql" in DATABASE_URL:
+        # For PostgreSQL, connect_timeout is passed in connect_args
+        engine = create_engine(DATABASE_URL, echo=False, connect_args={"connect_timeout": 10})
+    else:
+        # For SQLite or others, connect_timeout might not be supported or named differently
+        engine = create_engine(DATABASE_URL, echo=False)
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 except Exception as e:
     print(f"Failed to create engine: {e}")
@@ -82,7 +87,12 @@ def get_db():
 def create_initial_user():
     if not SessionLocal: return
     db = SessionLocal()
-... (rest of the function content)
+    try:
+        # Simple placeholder for initial user creation
+        pass
+    finally:
+        db.close()
+
 @app.on_event("startup")
 async def startup_event():
     print("DELTA Backend Starting...")

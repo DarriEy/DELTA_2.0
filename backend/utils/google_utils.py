@@ -37,11 +37,22 @@ def get_credentials():
 
     # 2. File path
     creds_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
-    if creds_path and os.path.exists(creds_path):
-        try:
-            return service_account.Credentials.from_service_account_file(creds_path, scopes=scopes)
-        except Exception as e:
-            logger.error(f"Error loading service account file at {creds_path}: {e}")
+    if creds_path:
+        # Check absolute or relative to CWD
+        if os.path.exists(creds_path):
+            try:
+                return service_account.Credentials.from_service_account_file(creds_path, scopes=scopes)
+            except Exception as e:
+                logger.error(f"Error loading service account file at {creds_path}: {e}")
+        
+        # Fallback: check if it's relative to the backend directory if CWD is project root
+        alt_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), os.path.basename(creds_path))
+        if os.path.exists(alt_path):
+            try:
+                return service_account.Credentials.from_service_account_file(alt_path, scopes=scopes)
+            except Exception as e:
+                logger.error(f"Error loading service account file at {alt_path}: {e}")
+
     
     # 3. Default
     try:
