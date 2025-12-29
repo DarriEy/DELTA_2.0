@@ -12,6 +12,7 @@ import PIL.Image
 import httpx
 import google.auth
 import google.auth.transport.requests
+import google.genai as genai
 import vertexai
 from vertexai.generative_models import GenerativeModel, Part, SafetySetting, HarmCategory, HarmBlockThreshold
 # from anthropic import Anthropic, AnthropicError  # Using Gemini instead
@@ -108,42 +109,28 @@ async def generate_image(prompt: str) -> Optional[str]:
         return None
 
 async def generate_gemini_response(prompt: str, system_prompt: str) -> str:
-    """Generates a response using Gemini 1.5 via Vertex AI."""
-    if not vertex_ready:
-        return "Vertex AI is not initialized. Please check credentials."
-        
+    """Generates a response using free Gemini API."""
     try:
-        # Check environment first for more dynamic behavior
-        model_name = os.environ.get("LLM_MODEL") or config.get("LLM_MODEL", "gemini-1.5-flash")
+        # Use free Gemini API
+        api_key = config.get("GOOGLE_API_KEY")
+        if not api_key:
+            return "Google API key not configured. Please set GOOGLE_API_KEY."
         
-        # Clean up model name
-        if "claude" in model_name.lower():
-            model_name = "gemini-1.5-flash"
+        # Create client with API key
+        client = genai.Client(api_key=api_key)
         
-        # Ensure it has the right prefix/suffix if needed, 
-        # but Vertex usually just takes 'gemini-1.5-flash'
+        # Combine system prompt with user prompt
+        full_prompt = f"{system_prompt}\n\nUser: {prompt}\nAssistant:"
         
-        model = GenerativeModel(
-            model_name=model_name,
-            system_instruction=[system_prompt]
-        )
-        
-        safety_settings = [
-            SafetySetting(category=HarmCategory.HARM_CATEGORY_HARASSMENT, threshold=HarmBlockThreshold.BLOCK_ONLY_HIGH),
-            SafetySetting(category=HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold=HarmBlockThreshold.BLOCK_ONLY_HIGH),
-            SafetySetting(category=HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold=HarmBlockThreshold.BLOCK_ONLY_HIGH),
-            SafetySetting(category=HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold=HarmBlockThreshold.BLOCK_ONLY_HIGH),
-        ]
-
-        loop = asyncio.get_event_loop()
-        response = await loop.run_in_executor(
-            None,
-            partial(model.generate_content, prompt, safety_settings=safety_settings)
+        response = client.models.generate_content(
+            model='gemini-1.5-flash',
+            contents=full_prompt
         )
         return response.text
+        
     except Exception as e:
-        logger.error(f"Gemini (Vertex) Error: {e}")
-        return f"Sorry, I encountered an error with the Google backend: {str(e)}"
+        logger.error(f"Free Gemini API Error: {e}")
+        return f"Sorry, I encountered an error: {str(e)}"
 
 async def generate_anthropic_response(prompt: str, system_prompt: str) -> str:
     """Generates a response using Anthropic Claude."""
