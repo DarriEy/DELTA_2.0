@@ -5,6 +5,7 @@ import modelingContent from "./modelingContent.json";
 import dataAnalysisContent from "./dataAnalysisContent.json";
 import SummaryModal from './summaryModal';
 import { v4 as uuidv4 } from 'uuid';
+import dropletAvatar from './assets/Droplet_avatar.png'; // Import the image
 
 const AnimatedAvatar = () => {
   const [isNodding, setIsNodding] = useState(false);
@@ -787,6 +788,13 @@ const handleSummaryCancel = () => {
           activeMode !== "general" ? "mode-change" : ""
         }`}
       >
+        {/* Helper text to encourage interaction */}
+        {!introductionSpoken && !isLoading && (
+           <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 whitespace-nowrap bg-white/80 px-3 py-1 rounded-full text-sm font-semibold text-blue-600 animate-bounce">
+             Click me to start!
+           </div>
+        )}
+
         {/* Avatar code */}
         <div
           ref={avatarRef}
@@ -808,7 +816,7 @@ const handleSummaryCancel = () => {
             <div className="animate-spin loading-ring rounded-full border-t-4 border-blue-500"></div>
           )}
           <img
-            src="/Droplet_avatar.png"
+            src={dropletAvatar}
             alt="Water drop avatar"
             className="object-contain avatar-image"
           />
