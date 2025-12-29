@@ -13,7 +13,7 @@ const API_BASE_URL = import.meta.env?.VITE_APP_API_BASE_URL || 'https://delta-ba
  */
 export async function generateSpeechFromText(text) {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/tts`, {
+    const response = await fetch(`${API_BASE_URL}/tts`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text }),
@@ -41,7 +41,7 @@ export async function generateSpeechFromText(text) {
  */
 export async function generateImageFromPrompt(prompt) {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/generate_image/`, {
+    const response = await fetch(`${API_BASE_URL}/generate_image/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt }),
