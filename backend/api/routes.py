@@ -76,7 +76,7 @@ def create_message_in_db(db, content, sender, conversation_id, message_index):
 
 
 @router.post("/learn")
-def learn_input(
+async def learn_input(
     user_input: str = Body(...),
     conversation_id: int = Body(...),
     db: Session = Depends(get_db),
