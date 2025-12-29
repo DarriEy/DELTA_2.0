@@ -1,6 +1,8 @@
-from fastapi import APIRouter, HTTPException, Depends, status, Body, Request, Response
+from fastapi import APIRouter, HTTPException, Depends, status, Body, Request, Response, BackgroundTasks
 from fastapi.responses import JSONResponse
 from .schemas import UserInput, ImagePrompt, ConversationCreate
+from .llm_integration import generate_response, generate_image, generate_summary_from_messages
+from modules.modeling import execute_modeling_job
 import yaml
 import json
 import asyncpg
@@ -17,6 +19,7 @@ from .models import (
     EducationalProgress as DBEducationalProgress,
     Job as DBJob,
     get_db,
+    SessionLocal,
 )
 from .schemas import (
     UserCreate,
@@ -100,7 +103,7 @@ def learn_input(
         )
 
         # Generate LLM response
-        llm_response = generate_response(user_input, "EDUCATIONAL_GUIDE")
+        llm_response = await generate_response(user_input, "EDUCATIONAL_GUIDE")
 
         # Create a new message entry in the database for the LLM response
         create_message_in_db(
@@ -130,16 +133,19 @@ async def generate_image_route(prompt_data: ImagePrompt):  # Marked as async
 
 
 @router.post("/run_modeling")
-async def run_modeling(input_data: dict, db: Session = Depends(get_db)):
+async def run_modeling(
+    input_data: dict, 
+    background_tasks: BackgroundTasks, 
+    db: Session = Depends(get_db)
+):
     """
-    Creates a modeling Job (Simulation or Calibration) 
-    that the local Symfluence agent will pick up.
+    Creates a modeling Job and triggers its execution in the background.
     """
     try:
         model = input_data.get("model", "SUMMA")
         job_type = input_data.get("job_type", "SIMULATION")
         
-        # Create a Job for the local agent
+        # Create a Job
         new_job = DBJob(
             type=job_type,
             parameters={
@@ -152,7 +158,10 @@ async def run_modeling(input_data: dict, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(new_job)
         
-        return {"message": f"{job_type} job submitted", "job_id": new_job.id}
+        # Trigger background execution
+        background_tasks.add_task(execute_modeling_job, new_job.id, SessionLocal)
+        
+        return {"message": f"{job_type} job submitted and running", "job_id": new_job.id}
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
