@@ -58,7 +58,8 @@ DATABASE_URL = raw_db_url.replace(
 )
 
 # Sync engine and session
-engine = create_engine(DATABASE_URL, echo=False)
+# Add timeout to prevent hanging if DB is unreachable
+engine = create_engine(DATABASE_URL, echo=False, connect_args={"connect_timeout": 10})
 
 # Use Session for database operations
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -96,7 +97,7 @@ def create_initial_user():
             print("User with ID 1 already exists.")
     except Exception as e:
         db.rollback()
-        print(f"An error occurred: {e}")
+        print(f"An error occurred during user creation: {e}")
     finally:
         db.close()
 
@@ -109,19 +110,24 @@ async def startup_event():
 
     # Create tables if they don't exist
     try:
+        print("Attempting to connect to database...")
         Base.metadata.create_all(bind=engine)
         print("Tables created successfully.")
+        
+        # Create initial user
+        create_initial_user()
     except Exception as e:
-        print(f"An error occurred while creating tables: {e}")
-        raise
-
-    # Create initial user
-    create_initial_user()
+        # Catch DB errors so the app still starts and we can see logs
+        print(f"CRITICAL ERROR: Failed to connect to database or create tables: {e}")
+        # We do NOT raise here, so the app can still serve /health
 
 
 # Include the API router with the /api prefix
 app.include_router(api_router, prefix="/api")
 
+@app.get("/health")
+async def health_check():
+    return {"status": "ok", "message": "Backend is running"}
 
 @app.get("/")
 async def root():
