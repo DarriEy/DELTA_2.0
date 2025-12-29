@@ -42,6 +42,7 @@ const AnimatedAvatar = () => {
   const [showSummaryModal, setShowSummaryModal] = useState(false);
   const [jobStatus, setJobStatus] = useState(null); // Add jobStatus state
   const [jobResult, setJobResult] = useState(null); // Add jobResult state
+  const [jobLogs, setJobLogs] = useState(""); // Add jobLogs state
 
   // Content Data
   const [currentEducationalContent, setCurrentEducationalContent] = useState(null);
@@ -292,6 +293,7 @@ const AnimatedAvatar = () => {
     setIsLoading(true);
     setJobStatus("Submitting...");
     setJobResult(null);
+    setJobLogs("Initiating connection to local runner...");
   
     try {
       const response = await fetch(`${API_BASE_URL}/api/run_modeling`, {
@@ -317,12 +319,14 @@ const AnimatedAvatar = () => {
               if (statusRes.ok) {
                   const job = await statusRes.json();
                   setJobStatus(job.status);
+                  if (job.logs) setJobLogs(job.logs); // Update logs in real-time
+
                   if (job.status === 'COMPLETED' || job.status === 'FAILED') {
                       clearInterval(pollJob);
                       setIsLoading(false);
                       if (job.status === 'COMPLETED') {
                           setJobResult(job.result);
-                          await speak("The task is complete. I've generated the performance plots for you.");
+                          await speak("The task is complete. You can see the results and execution logs on your screen.");
                       } else {
                           await speak("I encountered an error during execution.");
                       }
@@ -331,7 +335,7 @@ const AnimatedAvatar = () => {
           } catch (e) {
               console.error("Polling error:", e);
           }
-      }, 3000);
+      }, 2000);
 
     } catch (error) {
       console.error("Error running modeling:", error);
@@ -480,6 +484,24 @@ const AnimatedAvatar = () => {
                                     alt="Result Plot" 
                                     className="w-full h-auto"
                                 />
+                            </div>
+                        )}
+
+                        {/* Terminal Console */}
+                        {jobStatus && (
+                            <div className="mt-4 rounded-xl border border-white/10 bg-black/60 shadow-inner overflow-hidden flex flex-col h-[200px]">
+                                <div className="bg-white/5 px-3 py-1 border-b border-white/10 flex justify-between items-center">
+                                    <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Execution Logs</span>
+                                    <div className="flex gap-1.5">
+                                        <div className="w-2 h-2 rounded-full bg-red-500/50" />
+                                        <div className="w-2 h-2 rounded-full bg-yellow-500/50" />
+                                        <div className="w-2 h-2 rounded-full bg-green-500/50" />
+                                    </div>
+                                </div>
+                                <div className="p-3 overflow-y-auto font-mono text-[10px] leading-relaxed text-cyan-100/80 whitespace-pre-wrap">
+                                    {jobLogs || "Waiting for output..."}
+                                    {jobStatus === 'RUNNING' && <span className="inline-block w-1.5 h-3 ml-1 bg-cyan-400 animate-pulse align-middle" />}
+                                </div>
                             </div>
                         )}
 
