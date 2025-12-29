@@ -163,6 +163,14 @@ async def get_pending_jobs(db: Session = Depends(get_db)):
     return jobs
 
 
+@router.get("/jobs/{job_id}", response_model=Job)
+async def get_job(job_id: int, db: Session = Depends(get_db)):
+    job = db.query(DBJob).filter(DBJob.id == job_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return job
+
+
 @router.patch("/jobs/{job_id}", response_model=Job)
 async def update_job(job_id: int, update_data: JobUpdate, db: Session = Depends(get_db)):
     job = db.query(DBJob).filter(DBJob.id == job_id).first()

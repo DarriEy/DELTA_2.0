@@ -40,6 +40,7 @@ const AnimatedAvatar = () => {
   const [selectedVariable, setSelectedVariable] = useState("temperature");
   const [summaryText, setSummaryText] = useState("");
   const [showSummaryModal, setShowSummaryModal] = useState(false);
+  const [jobStatus, setJobStatus] = useState(null); // Add jobStatus state
 
   // Content Data
   const [currentEducationalContent, setCurrentEducationalContent] = useState(null);
@@ -286,12 +287,52 @@ const AnimatedAvatar = () => {
   };
 
   const handleRunModels = async () => {
-      setIsLoading(true);
-      // Simulate/Call API
-      setTimeout(() => {
-          setIsLoading(false);
-          alert(`Model(s) ${selectedModel} run completed.`);
-      }, 2000);
+    console.log("Running model(s):", selectedModel);
+    setIsLoading(true);
+    setJobStatus("Submitting...");
+  
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/run_confluence`, {
+        method: "POST",
+        credentials: 'include',
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: selectedModel }),
+      });
+  
+      if (!response.ok) throw new Error("Failed to submit job");
+  
+      const result = await response.json();
+      const jobId = result.job_id;
+      setJobStatus("Queued");
+      
+      // Poll for job status
+      const pollJob = setInterval(async () => {
+          try {
+              const statusRes = await fetch(`${API_BASE_URL}/api/jobs/${jobId}`);
+              if (statusRes.ok) {
+                  const job = await statusRes.json();
+                  setJobStatus(job.status);
+                  if (job.status === 'COMPLETED' || job.status === 'FAILED') {
+                      clearInterval(pollJob);
+                      setIsLoading(false);
+                      if (job.status === 'COMPLETED') {
+                          await speak("The simulation is complete.");
+                      } else {
+                          await speak("The simulation encountered an error.");
+                      }
+                  }
+              }
+          } catch (e) {
+              console.error("Polling error:", e);
+          }
+      }, 3000);
+
+    } catch (error) {
+      console.error("Error running CONFLUENCE:", error);
+      alert(error.message);
+      setIsLoading(false);
+      setJobStatus(null);
+    }
   };
 
    const handleRunAnalysis = () => {
@@ -391,7 +432,7 @@ const AnimatedAvatar = () => {
             <div className="mt-8 flex items-center gap-2 px-4 py-1.5 rounded-full bg-black/40 backdrop-blur border border-white/10">
                 <div className={`w-2 h-2 rounded-full ${isListening ? 'bg-red-500 animate-pulse' : isTalking ? 'bg-green-500 animate-pulse' : isLoading ? 'bg-yellow-400 animate-spin' : 'bg-cyan-500'}`} />
                 <span className="text-xs font-medium tracking-wide uppercase text-white/70">
-                    {isListening ? "Listening..." : isTalking ? "Speaking..." : isLoading ? "Thinking..." : "Ready"}
+                    {jobStatus ? `Job: ${jobStatus}` : isListening ? "Listening..." : isTalking ? "Speaking..." : isLoading ? "Thinking..." : "Ready"}
                 </span>
             </div>
         </div>
