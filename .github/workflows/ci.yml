@@ -27,10 +27,13 @@ jobs:
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
     - name: Run health check test
       run: |
-        # Simple health check simulation or actual pytest if available
         echo "Running backend health tests..."
-        cd backend && export PYTHONPATH=$PWD
-        # We skip actual Google tests in CI unless secrets are provided
+        cd backend
+        # List files to verify __init__.py existence in CI
+        ls -R modules/ utils/
+        export PYTHONPATH=$PYTHONPATH:.
+        # Attempt to import specifically to narrow down the failure
+        python -c "import modules.modeling; print('Modules modeling imported')"
         python -c "from api.main import app; print('App imported successfully')"
 
   frontend-build:
