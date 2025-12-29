@@ -31,10 +31,9 @@ jobs:
         cd backend
         # List files to verify __init__.py existence in CI
         ls -R modules/ utils/
-        export PYTHONPATH=$PYTHONPATH:.
         # Attempt to import specifically to narrow down the failure
-        python -c "import modules.modeling; print('Modules modeling imported')"
-        python -c "from api.main import app; print('App imported successfully')"
+        PYTHONPATH=. python -c "import modules.modeling; print('Modules modeling imported')"
+        PYTHONPATH=. python -c "from api.main import app; print('App imported successfully')"
 
   frontend-build:
     runs-on: ubuntu-latest
