@@ -1,0 +1,6 @@
+.env
+marty-tts-74c202d4f256.json
+*.json.venv/
+.venv/
+*.pyc
+__pycache__/
