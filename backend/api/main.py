@@ -49,7 +49,11 @@ async def handle_options_request(request: Request, full_path: str):
     })
 
 # Database URL from environment variable
-DATABASE_URL = os.environ.get("DATABASE_URL").replace(
+raw_db_url = os.environ.get("DATABASE_URL")
+if not raw_db_url:
+    raise ValueError("DATABASE_URL environment variable is not set!")
+
+DATABASE_URL = raw_db_url.replace(
     "postgres://", "postgresql://", 1
 )
 
