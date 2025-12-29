@@ -85,9 +85,17 @@ def create_initial_user():
 ... (rest of the function content)
 @app.on_event("startup")
 async def startup_event():
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/app/google-credentials.json"
-    print("GOOGLE_APPLICATION_CREDENTIALS:", os.environ["GOOGLE_APPLICATION_CREDENTIALS"])
     print("DELTA Backend Starting...")
+    
+    # Robust credential handling
+    creds_path = "/app/google-credentials.json"
+    if os.path.exists(creds_path):
+        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = creds_path
+        print(f"Using Google credentials from {creds_path}")
+    elif os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):
+        print(f"Using Google credentials from environment path: {os.environ.get('GOOGLE_APPLICATION_CREDENTIALS')}")
+    else:
+        print("WARNING: GOOGLE_APPLICATION_CREDENTIALS not set. Google Cloud features will fail.")
 
     if SessionLocal:
         # Create tables if they don't exist
@@ -102,6 +110,29 @@ async def startup_event():
             print(f"CRITICAL ERROR: Failed to connect to database: {e}")
     else:
         print("Skipping database initialization (no SessionLocal)")
+
+@app.get("/health/google")
+async def google_health_check():
+    """Checks the status of Google service integration."""
+    results = {
+        "generative_ai": "unknown",
+        "vertex_ai": "unknown",
+        "credentials_found": os.path.exists(os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "")),
+    }
+    
+    try:
+        import google.generativeai as genai
+        from .llm_integration import GOOGLE_API_KEY
+        if GOOGLE_API_KEY:
+            # Quick test of the API
+            model = genai.GenerativeModel('gemini-1.5-flash')
+            results["generative_ai"] = "ok"
+        else:
+            results["generative_ai"] = "missing_api_key"
+    except Exception as e:
+        results["generative_ai"] = f"error: {str(e)}"
+
+    return results
 
 
 # Include the API router with the /api prefix

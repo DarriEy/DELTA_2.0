@@ -1,0 +1,53 @@
+name: DELTA CI
+
+on:
+  push:
+    branches: [ "main", "feature/website-refresh" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  backend-test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    - name: Install dependencies
+      run: |
+        cd backend
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    - name: Lint with flake8
+      run: |
+        pip install flake8
+        # stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+    - name: Run health check test
+      run: |
+        # Simple health check simulation or actual pytest if available
+        echo "Running backend health tests..."
+        cd backend && export PYTHONPATH=$PWD
+        # We skip actual Google tests in CI unless secrets are provided
+        python -c "from api.main import app; print('App imported successfully')"
+
+  frontend-build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+    - name: Install dependencies
+      run: |
+        cd frontend
+        npm ci
+    - name: Build
+      run: |
+        cd frontend
+        npm run build

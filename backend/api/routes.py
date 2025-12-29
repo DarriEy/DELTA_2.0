@@ -430,6 +430,8 @@ async def process_input(
         raise HTTPException(status_code=500, detail=str(e))
     
 
+from utils.google_utils import get_tts_client
+
 @router.post("/tts")  # Changed from "/api/tts"
 async def text_to_speech(request: Request):
     """Handles text-to-speech requests."""
@@ -439,16 +441,8 @@ async def text_to_speech(request: Request):
         if not text:
             raise HTTPException(status_code=400, detail="No text provided")
 
-        # Get credentials path from environment variable or default to /app/google-credentials.json
-        credentials_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "/app/google-credentials.json")
-        
-        if not os.path.exists(credentials_path):
-             raise FileNotFoundError(f"Google credentials file not found at: {credentials_path}")
-
-        credentials = service_account.Credentials.from_service_account_file(credentials_path)
-
-        # Initialize the Text-to-Speech client
-        tts_client = texttospeech.TextToSpeechClient(credentials=credentials)
+        # Use centralized TTS client
+        tts_client = get_tts_client()
 
         # Configure the TTS request
         synthesis_input = texttospeech.SynthesisInput(text=text)

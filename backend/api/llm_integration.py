@@ -1,263 +1,251 @@
 # backend/api/llm_integration.py
 import base64
-from io import BytesIO
 import os
+import asyncio
+import logging
+import traceback
+from io import BytesIO
+from functools import partial
+from typing import List, Optional, Dict, Any
+
+import PIL.Image
+import httpx
+import google.auth
+import google.auth.transport.requests
+import vertexai
+from vertexai.generative_models import GenerativeModel, Part, SafetySetting, HarmCategory, HarmBlockThreshold
 from anthropic import Anthropic, AnthropicError
+from dotenv import load_dotenv
 
 from utils.config import config
 from utils.prompts import (
     DELTA_SYSTEM_PROMPT,
     EDUCATIONAL_GUIDE_PROMPT,
 )
+from utils.google_utils import get_credentials
 from modules.educational import get_educational_content
-import google.generativeai as genai
-from google.generativeai.types import HarmCategory, HarmBlockThreshold
-import PIL.Image
-import httpx
-import google.auth
-import traceback
-from dotenv import load_dotenv
-import asyncio
-from functools import partial
+
 load_dotenv()
 
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-client = Anthropic(api_key=config["ANTHROPIC_API_KEY"])
-PROJECT_ID = os.environ.get("PROJECT_ID")
-LOCATION = os.environ.get("LOCATION")
+# Constants
+PROJECT_ID = config.get("PROJECT_ID")
+LOCATION = config.get("LOCATION", "us-central1")
 
-async def generate_image(prompt: str) -> str:
-    """Generates an image using Imagen 3 based on the given prompt."""
+# Initialize Clients
+anthropic_client = Anthropic(api_key=config.get("ANTHROPIC_API_KEY"))
+
+def init_vertex():
+    """Initializes Vertex AI with the provided credentials."""
+    try:
+        creds = get_credentials()
+        if creds:
+            vertexai.init(project=PROJECT_ID, location=LOCATION, credentials=creds)
+            logger.info(f"Vertex AI initialized with project {PROJECT_ID}")
+            return True
+        else:
+            logger.warning("No Google credentials found for Vertex AI.")
+            return False
+    except Exception as e:
+        logger.error(f"Vertex AI init failed: {e}")
+        return False
+
+# Trigger initialization
+vertex_ready = init_vertex()
+
+async def generate_image(prompt: str) -> Optional[str]:
+    """Generates an image using Imagen 3 via Vertex AI."""
+    if not PROJECT_ID or not LOCATION:
+        logger.error("PROJECT_ID or LOCATION not configured for image generation.")
+        return None
+
     url = f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/{PROJECT_ID}/locations/{LOCATION}/publishers/google/models/imagegeneration:predict"
 
     try:
-        # Explicitly request the cloud-platform scope
-        credentials, _ = google.auth.default(
-            scopes=["https://www.googleapis.com/auth/cloud-platform"]
-        )
+        creds = get_credentials()
+        if not creds:
+            return None
 
-        # Create a new request object
-        request = google.auth.transport.requests.Request()
-
-        # Refresh the credentials synchronously
-        credentials.refresh(request)
-
-        # Use the access token from the credentials
-        access_token = credentials.token
+        # Ensure credentials have a token
+        auth_request = google.auth.transport.requests.Request()
+        creds.refresh(auth_request)
 
         headers = {
-            "Authorization": f"Bearer {access_token}",
+            "Authorization": f"Bearer {creds.token}",
             "Content-Type": "application/json; charset=utf-8",
         }
 
         data = {
-        "instances": [
-            {
-            "prompt": prompt,
-            }
-        ],
-        "parameters": {
-            "aspectRatio": "16:9",  
-            "sampleCount": 1,
-        },
+            "instances": [{"prompt": prompt}],
+            "parameters": {
+                "aspectRatio": "16:9",
+                "sampleCount": 1,
+            },
         }
 
-
-
-        async with httpx.AsyncClient(timeout=120.0) as client:  # Increased timeout
+        async with httpx.AsyncClient(timeout=120.0) as client:
             response = await client.post(url, headers=headers, json=data)
-
-            # Check for HTTP errors
+            
             if response.status_code != 200:
-                print(f"HTTP error occurred: {response.status_code}")
-                print(f"Response content: {response.text}")
-                return None
-
-            response.raise_for_status()
-
-            # Check for empty response body
-            if not response.content:
-                print("Error: Empty response body received from Vertex AI API.")
+                logger.error(f"Vertex AI Image Error: {response.status_code} - {response.text}")
                 return None
 
             response_data = response.json()
-
-            # Check if the response contains the expected data
-            if "predictions" in response_data and response_data["predictions"]:
-                base64_image = response_data["predictions"][0].get("bytesBase64Encoded")
+            predictions = response_data.get("predictions")
+            
+            if predictions and len(predictions) > 0:
+                base64_image = predictions[0].get("bytesBase64Encoded")
                 if base64_image:
-                    try:
-                        # Decode the base64 image
-                        image_bytes = base64.b64decode(base64_image)
-                        pil_image = PIL.Image.open(BytesIO(image_bytes))
-
-                        # Convert the image to a data URI
-                        buffered = BytesIO()
-                        pil_image.save(buffered, format="PNG")
-                        image_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
-                        data_uri = f"data:image/png;base64,{image_str}"
-
-                        return data_uri
-                    except Exception as e:
-                        print(f"Error processing image data: {e}")
-                        traceback.print_exc()  # Print traceback for image processing errors
-                        return None
-                else:
-                    print("Error: 'bytesBase64Encoded' key not found in the response.")
-                    print(f"Response content: {response_data}")
-                    return None
-            else:
-                print("Error: 'predictions' key not found in the response.")
-                print(f"Response content: {response_data}")
-                return None
-
-    except httpx.HTTPStatusError as e:
-        print(f"HTTP error occurred: {e}")
-        print(f"Response content: {e.response.text}")
-        return None
+                    return f"data:image/png;base64,{base64_image}"
+            
+            return None
 
     except Exception as e:
-        print(f"Error generating image: {e}")
-        traceback.print_exc() # Print traceback for other exceptions
+        logger.error(f"Error generating image: {e}")
         return None
-    
-async def generate_response(user_input: str, role: str = "DELTA"):
-    """Generates a response from the LLM based on the user input and role."""
 
-    if role == "DELTA":
-        system_prompt = DELTA_SYSTEM_PROMPT
-        try:
-            print(f"Sending request to LLM with role: {role}")
-            print(f"User input: {user_input}")
-
-            # Run the synchronous code in a thread pool
-            loop = asyncio.get_event_loop()
-            response = await loop.run_in_executor(
-                None,
-                partial(
-                    client.messages.create,
-                    model=config["LLM_MODEL"],
-                    max_tokens=1024,
-                    system=system_prompt,
-                    messages=[
-                        {"role": "user", "content": user_input},
-                    ],
-                )
-            )
-            
-            print(f"LLM response: {response}")
-            return response.content[0].text
-
-        except AnthropicError as e:
-            print(f"Error generating response from LLM: {e}")
-            return "Sorry, I encountered an error while processing your request."
-
-    elif role == "EDUCATIONAL_GUIDE":
-        system_prompt = EDUCATIONAL_GUIDE_PROMPT
-        # Function definitions for the LLM to use
-        functions = [
-            {
-                "name": "get_educational_content",
-                "description": "Provides educational content on a given hydrological topic.",
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "topic": {
-                            "type": "string",
-                            "description": "The hydrological topic to explain (e.g., 'hydrological cycle', 'watershed').",
-                        },
-                    },
-                    "required": ["topic"],
-                },
-            }
+async def generate_gemini_response(prompt: str, system_prompt: str) -> str:
+    """Generates a response using Gemini 1.5 via Vertex AI."""
+    if not vertex_ready:
+        return "Vertex AI is not initialized. Please check credentials."
+        
+    try:
+        # Check environment first for more dynamic behavior
+        model_name = os.environ.get("LLM_MODEL") or config.get("LLM_MODEL", "gemini-1.5-flash")
+        
+        # Clean up model name
+        if "claude" in model_name.lower():
+            model_name = "gemini-1.5-flash"
+        
+        # Ensure it has the right prefix/suffix if needed, 
+        # but Vertex usually just takes 'gemini-1.5-flash'
+        
+        model = GenerativeModel(
+            model_name=model_name,
+            system_instruction=[system_prompt]
+        )
+        
+        safety_settings = [
+            SafetySetting(category=HarmCategory.HARM_CATEGORY_HARASSMENT, threshold=HarmBlockThreshold.BLOCK_ONLY_HIGH),
+            SafetySetting(category=HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold=HarmBlockThreshold.BLOCK_ONLY_HIGH),
+            SafetySetting(category=HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold=HarmBlockThreshold.BLOCK_ONLY_HIGH),
+            SafetySetting(category=HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold=HarmBlockThreshold.BLOCK_ONLY_HIGH),
         ]
 
-        try:
-            print(f"Sending request to LLM with role: {role}")
-            print(f"User input: {user_input}")
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(
+            None,
+            partial(model.generate_content, prompt, safety_settings=safety_settings)
+        )
+        return response.text
+    except Exception as e:
+        logger.error(f"Gemini (Vertex) Error: {e}")
+        return f"Sorry, I encountered an error with the Google backend: {str(e)}"
 
-            response = client.messages.create(
-                model=config["LLM_MODEL"],
+async def generate_anthropic_response(prompt: str, system_prompt: str) -> str:
+    """Generates a response using Anthropic Claude."""
+    try:
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(
+            None,
+            partial(
+                anthropic_client.messages.create,
+                model=config.get("LLM_MODEL", "claude-3-sonnet-20240229"),
                 max_tokens=1024,
                 system=system_prompt,
-                messages=[
-                    {"role": "user", "content": user_input},
-                ],
-                tools=functions,
+                messages=[{"role": "user", "content": prompt}],
             )
-            print(f"LLM response: {response}")
+        )
+        return response.content[0].text
+    except AnthropicError as e:
+        logger.error(f"Anthropic Error: {e}")
+        return f"Claude Error: {str(e)}"
 
-            # Handle tool calls
-            if response.content and response.content[0].type == "tool_use":
-                tool_call = response.content[0]
-                if tool_call.name == "get_educational_content":
-                    topic = tool_call.input.get("topic")
-                    content = get_educational_content(topic)
-
-                    # Construct the messages for the follow-up request,
-                    # combining the tool call and result into a single assistant message
-                    messages = [
-                        {"role": "user", "content": user_input},
-                        {
-                            "role": "assistant",
-                            "content": [
-                                {
-                                    "type": "tool_use",
-                                    "id": tool_call.id,
-                                    "name": tool_call.name,
-                                    "input": tool_call.input,
-                                },
-                                {
-                                    "type": "text",
-                                    "text": content,
-                                }
-                            ]
-                        }
-                    ]
-
-                    final_response = client.messages.create(
-                        model=config["LLM_MODEL"],
-                        max_tokens=1024,
-                        system=system_prompt,
-                        messages=messages,
-                    )
-                    return final_response.content[0].text
-
-            return response.content[0].text
-
-        except AnthropicError as e:
-            print(f"Error generating response from LLM: {e}")
-            return "Sorry, I encountered an error while processing your request."
+async def generate_response(user_input: str, role: str = "DELTA") -> str:
+    """Main entry point for generating responses."""
+    system_prompt = DELTA_SYSTEM_PROMPT if role == "DELTA" else EDUCATIONAL_GUIDE_PROMPT
+    preferred_model = config.get("LLM_MODEL", "").lower()
     
+    if "gemini" in preferred_model or not config.get("ANTHROPIC_API_KEY"):
+        return await generate_gemini_response(user_input, system_prompt)
     else:
-        raise ValueError(f"Unknown role: {role}")
-    
-async def generate_summary_from_messages(messages):
-    """Generates a summary from a list of messages."""
+        if role == "EDUCATIONAL_GUIDE":
+            return await generate_anthropic_with_tools(user_input, system_prompt)
+        return await generate_anthropic_response(user_input, system_prompt)
+
+async def generate_anthropic_with_tools(user_input: str, system_prompt: str) -> str:
+    """Handles Anthropic tool use for educational content."""
+    functions = [
+        {
+            "name": "get_educational_content",
+            "description": "Provides educational content on a given hydrological topic.",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "topic": {
+                        "type": "string",
+                        "description": "The hydrological topic to explain (e.g., 'hydrological cycle', 'watershed').",
+                    },
+                },
+                "required": ["topic"],
+            },
+        }
+    ]
+
     try:
-        # Format messages for LLM prompt
-        formatted_messages = "\n".join(
-            f"{msg['sender']}: {msg['content']}" for msg in messages
+        response = anthropic_client.messages.create(
+            model=config.get("LLM_MODEL", "claude-3-sonnet-20240229"),
+            max_tokens=1024,
+            system=system_prompt,
+            messages=[{"role": "user", "content": user_input}],
+            tools=functions,
         )
 
-        # Construct the summarization prompt
-        prompt = f"Please provide a concise summary of the following conversation:\n\n{formatted_messages}\n\nSummary:"
+        if response.content and response.content[0].type == "tool_use":
+            tool_call = response.content[0]
+            if tool_call.name == "get_educational_content":
+                topic = tool_call.input.get("topic")
+                content = get_educational_content(topic)
 
-        print(f"Sending summarization request to LLM")
-        print(f"Prompt: {prompt}")
+                messages = [
+                    {"role": "user", "content": user_input},
+                    {
+                        "role": "assistant",
+                        "content": [
+                            {
+                                "type": "tool_use",
+                                "id": tool_call.id,
+                                "name": tool_call.name,
+                                "input": tool_call.input,
+                            },
+                            {"type": "text", "text": f"Retrieved content for {topic}: {content}"}
+                        ]
+                    }
+                ]
 
-        response = client.messages.create(
-            model=config["LLM_MODEL"],
-            max_tokens=512,  # Adjust as needed for summary length
-            system=DELTA_SYSTEM_PROMPT,
-            messages=[
-                {"role": "user", "content": prompt},
-            ],
-        )
-        print(f"LLM response: {response}")
+                final_response = anthropic_client.messages.create(
+                    model=config.get("LLM_MODEL", "claude-3-sonnet-20240229"),
+                    max_tokens=1024,
+                    system=system_prompt,
+                    messages=messages,
+                )
+                return final_response.content[0].text
 
         return response.content[0].text
+    except Exception as e:
+        logger.error(f"Error in Anthropic tools: {e}")
+        return f"Error: {str(e)}"
 
-    except AnthropicError as e:
-        print(f"Error generating summary from LLM: {e}")
-        return "Sorry, I encountered an error while generating the summary."
+async def generate_summary_from_messages(messages: List[Dict[str, str]]) -> str:
+    """Generates a summary of a conversation."""
+    formatted_messages = "\n".join([f"{msg['sender']}: {msg['content']}" for msg in messages])
+    prompt = f"Please provide a concise scientific summary of the following conversation, highlighting key hydrological insights and action items:\n\n{formatted_messages}\n\nSummary:"
+    
+    preferred_model = config.get("LLM_MODEL", "").lower()
+    if "gemini" in preferred_model or not config.get("ANTHROPIC_API_KEY"):
+        return await generate_gemini_response(prompt, "You are a professional hydrological research summarizer.")
+    else:
+        return await generate_anthropic_response(prompt, "You are a professional hydrological research summarizer.")

@@ -3,14 +3,9 @@ uvicorn
 pydantic==2.*
 SQLAlchemy
 alembic
-
-
-
-
 python-dotenv
 bcrypt
 httpx
-
 psycopg2-binary
 PyYAML
 requests
@@ -27,4 +22,9 @@ google-auth
 google-cloud-storage
 google-cloud-texttospeech>=2.12.0
 google-api-core>=2.11.0
+google-cloud-vision
 grpcio>=1.51.0
+pandas
+numpy
+matplotlib
+scipy
