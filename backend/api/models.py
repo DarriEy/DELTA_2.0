@@ -14,6 +14,22 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
 
+# Define the Job model
+class Job(Base):
+    __tablename__ = "jobs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    type = Column(String, index=True)
+    parameters = Column(JSON)
+    status = Column(String, default="PENDING", index=True)
+    result = Column(JSON, nullable=True)
+    logs = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    def __repr__(self):
+        return f"<Job(id={self.id}, type={self.type}, status={self.status})>"
+
 # Define the User model
 class User(Base):
     __tablename__ = "users"

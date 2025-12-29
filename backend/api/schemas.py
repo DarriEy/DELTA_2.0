@@ -107,6 +107,26 @@ class EducationalProgress(EducationalProgressBase):
     class Config:
         from_attributes = True
 
+class JobBase(BaseModel):
+    type: str
+    parameters: dict
+
+class JobCreate(JobBase):
+    pass
+
+class JobUpdate(BaseModel):
+    status: Optional[str] = None
+    result: Optional[dict] = None
+    logs: Optional[str] = None
+
+class Job(JobBase):
+    id: int
+    status: str
+    result: Optional[dict] = None
+    created_at: datetime
+    updated_at: datetime
+    class Config:
+        from_attributes = True
 
 # Consider moving this to a separate module or routes.py if it's only used there
 class RunConfluenceInput(BaseModel):

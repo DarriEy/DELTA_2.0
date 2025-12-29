@@ -8,6 +8,16 @@ import httpx
 import subprocess
 from sqlalchemy.future import select
 from sqlalchemy import update, func
+from .models import (
+    User as DBUser,
+    Conversation as DBConversation,
+    Message as DBMessage,
+    ModelConfig as DBModelConfig,
+    ModelRun as DBModelRun,
+    EducationalProgress as DBEducationalProgress,
+    Job as DBJob,
+    get_db,
+)
 from .schemas import (
     UserCreate,
     User,
@@ -22,20 +32,9 @@ from .schemas import (
     EducationalProgressCreate,
     EducationalProgress,
     ConversationUpdate,
-)
-from .models import (
-    User as DBUser,
-    Conversation as DBConversation,
-    Message as DBMessage,
-    ModelConfig as DBModelConfig,
-    ModelRun as DBModelRun,
-    EducationalProgress as DBEducationalProgress,
-    get_db,
-)
-from .llm_integration import (
-    generate_response,
-    generate_image,
-    generate_summary_from_messages,
+    JobCreate,
+    JobUpdate,
+    Job,
 )
 import bcrypt
 from typing import List  # Import List from typing
@@ -131,35 +130,55 @@ async def generate_image_route(prompt_data: ImagePrompt):  # Marked as async
 
 
 @router.post("/run_confluence")
-async def run_confluence(input_data: dict):
+async def run_confluence(input_data: dict, db: Session = Depends(get_db)):
+    """
+    Instead of running confluence locally, we create a Job record 
+    that the local INDRA agent will pick up.
+    """
     try:
         model = input_data.get("model")
-        config_path = input_data.get("configPath")
-
-        # Load and update the configuration file
-        with open(config_path, "r") as f:
-            config = yaml.safe_load(f)
-
-        config["HYDROLOGICAL_MODEL"] = model
-
-        # Save the updated configuration file
-        with open(config_path, "w") as f:
-            yaml.safe_dump(config, f)
-
-        # Run CONFLUENCE using subprocess
-        confluence_path = "/Users/darrieythorsson/compHydro/code/CONFLUENCE/CONFLUENCE.py"  # Replace with the actual path to confluence.py
-        process = subprocess.run(
-            ["python", confluence_path, "--config", config_path],
-            capture_output=True,
-            text=True,
+        
+        # Create a Job for the local agent
+        new_job = DBJob(
+            type="SIMULATION",
+            parameters={
+                "model": model,
+                "watershed": "Bow_at_Banff", # Default or extract from context
+            },
+            status="PENDING"
         )
-
-        if process.returncode != 0:
-            raise HTTPException(status_code=500, detail=process.stderr)
-
-        return {"message": "CONFLUENCE run started", "output": process.stdout}
+        db.add(new_job)
+        db.commit()
+        db.refresh(new_job)
+        
+        return {"message": "Job submitted to local agent", "job_id": new_job.id}
     except Exception as e:
+        db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/jobs/pending", response_model=List[Job])
+async def get_pending_jobs(db: Session = Depends(get_db)):
+    jobs = db.query(DBJob).filter(DBJob.status == "PENDING").all()
+    return jobs
+
+
+@router.patch("/jobs/{job_id}", response_model=Job)
+async def update_job(job_id: int, update_data: JobUpdate, db: Session = Depends(get_db)):
+    job = db.query(DBJob).filter(DBJob.id == job_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    if update_data.status:
+        job.status = update_data.status
+    if update_data.result:
+        job.result = update_data.result
+    if update_data.logs:
+        job.logs = update_data.logs
+        
+    db.commit()
+    db.refresh(job)
+    return job
 
 
 @router.post("/users/", response_model=User)
