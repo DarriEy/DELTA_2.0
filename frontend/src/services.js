@@ -1,4 +1,4 @@
-const API_BASE_URL = 'https://delta-h-7344a1b27b42.herokuapp.com' //import.meta.env.VITE_APP_API_BASE_URL;
+const API_BASE_URL = 'https://delta-backend-zom0.onrender.com' //import.meta.env.VITE_APP_API_BASE_URL;
 
 console.log("API_BASE_URL in services:", API_BASE_URL);
 
