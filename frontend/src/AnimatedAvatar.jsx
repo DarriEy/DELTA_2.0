@@ -339,7 +339,8 @@ const AnimatedAvatar = () => {
 
     } catch (error) {
       console.error("Error running modeling:", error);
-      alert(error.message);
+      setJobLogs(prev => prev + `\n[UI ERROR] Failed to connect to server: ${error.message}\nPossible causes: Backend is asleep, CORS error, or Internet connection lost.`);
+      alert("Failed to start modeling. Check the console logs for details.");
       setIsLoading(false);
       setJobStatus(null);
     }

@@ -39,13 +39,15 @@ app.add_middleware(
 @app.options("/{full_path:path}")
 async def handle_options_request(request: Request, full_path: str):
     origin = request.headers.get("Origin")
-    allow_origin = origin if origin in origins else "https://delta-h-frontend-b338f294b004.herokuapp.com"
+    # Dynamically allow the origin if it's from github.io or localhost
+    allow_origin = origin if origin and ("github.io" in origin or "localhost" in origin) else "https://DarriEy.github.io"
 
     return Response(status_code=204, headers={
         "Access-Control-Allow-Origin": allow_origin,
-        "Access-Control-Allow-Methods": "POST, GET, OPTIONS, PUT, DELETE", # Allow all methods you use
-        "Access-Control-Allow-Headers": "Content-Type", # Allow necessary headers
-        "Access-Control-Max-Age": "86400" # Cache preflight response for 1 day
+        "Access-Control-Allow-Methods": "POST, GET, OPTIONS, PUT, PATCH, DELETE", 
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With",
+        "Access-Control-Allow-Credentials": "true",
+        "Access-Control-Max-Age": "86400"
     })
 
 # Database URL from environment variable
