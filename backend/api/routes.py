@@ -129,21 +129,22 @@ async def generate_image_route(prompt_data: ImagePrompt):  # Marked as async
         raise HTTPException(status_code=500, detail="Image generation failed")
 
 
-@router.post("/run_confluence")
-async def run_confluence(input_data: dict, db: Session = Depends(get_db)):
+@router.post("/run_modeling")
+async def run_modeling(input_data: dict, db: Session = Depends(get_db)):
     """
-    Instead of running confluence locally, we create a Job record 
-    that the local INDRA agent will pick up.
+    Creates a modeling Job (Simulation or Calibration) 
+    that the local Symfluence agent will pick up.
     """
     try:
-        model = input_data.get("model")
+        model = input_data.get("model", "SUMMA")
+        job_type = input_data.get("job_type", "SIMULATION")
         
         # Create a Job for the local agent
         new_job = DBJob(
-            type="SIMULATION",
+            type=job_type,
             parameters={
                 "model": model,
-                "watershed": "Bow_at_Banff", # Default or extract from context
+                "watershed": "Bow_at_Banff_lumped",
             },
             status="PENDING"
         )
@@ -151,7 +152,7 @@ async def run_confluence(input_data: dict, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(new_job)
         
-        return {"message": "Job submitted to local agent", "job_id": new_job.id}
+        return {"message": f"{job_type} job submitted", "job_id": new_job.id}
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))

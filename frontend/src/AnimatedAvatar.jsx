@@ -41,6 +41,7 @@ const AnimatedAvatar = () => {
   const [summaryText, setSummaryText] = useState("");
   const [showSummaryModal, setShowSummaryModal] = useState(false);
   const [jobStatus, setJobStatus] = useState(null); // Add jobStatus state
+  const [jobResult, setJobResult] = useState(null); // Add jobResult state
 
   // Content Data
   const [currentEducationalContent, setCurrentEducationalContent] = useState(null);
@@ -286,17 +287,21 @@ const AnimatedAvatar = () => {
     }
   };
 
-  const handleRunModels = async () => {
-    console.log("Running model(s):", selectedModel);
+  const handleRunModels = async (jobType = "SIMULATION") => {
+    console.log(`Running ${jobType} for:`, selectedModel);
     setIsLoading(true);
     setJobStatus("Submitting...");
+    setJobResult(null);
   
     try {
-      const response = await fetch(`${API_BASE_URL}/api/run_confluence`, {
+      const response = await fetch(`${API_BASE_URL}/api/run_modeling`, {
         method: "POST",
         credentials: 'include',
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ model: selectedModel }),
+        body: JSON.stringify({ 
+            model: selectedModel,
+            job_type: jobType 
+        }),
       });
   
       if (!response.ok) throw new Error("Failed to submit job");
@@ -316,9 +321,10 @@ const AnimatedAvatar = () => {
                       clearInterval(pollJob);
                       setIsLoading(false);
                       if (job.status === 'COMPLETED') {
-                          await speak("The simulation is complete.");
+                          setJobResult(job.result);
+                          await speak("The task is complete. I've generated the performance plots for you.");
                       } else {
-                          await speak("The simulation encountered an error.");
+                          await speak("I encountered an error during execution.");
                       }
                   }
               }
@@ -328,7 +334,7 @@ const AnimatedAvatar = () => {
       }, 3000);
 
     } catch (error) {
-      console.error("Error running CONFLUENCE:", error);
+      console.error("Error running modeling:", error);
       alert(error.message);
       setIsLoading(false);
       setJobStatus(null);
@@ -466,8 +472,17 @@ const AnimatedAvatar = () => {
                  {activeMode === 'modeling' && currentModelingContent && (
                     <div className="space-y-4">
                         <h2 className="text-2xl font-bold text-blue-400">{currentModelingContent.title}</h2>
-                        <p className="text-sm text-slate-300">{currentModelingContent.overview}</p>
                         
+                        {jobResult && jobResult.plot_base64 && (
+                            <div className="mt-4 rounded-xl overflow-hidden border border-white/20 shadow-2xl bg-black/20">
+                                <img 
+                                    src={`data:image/png;base64,${jobResult.plot_base64}`} 
+                                    alt="Result Plot" 
+                                    className="w-full h-auto"
+                                />
+                            </div>
+                        )}
+
                         <div className="glass-panel p-4 rounded-xl">
                             <label className="text-xs uppercase font-bold text-blue-200 block mb-2">Select Hydrological Model</label>
                             <select 
@@ -475,12 +490,18 @@ const AnimatedAvatar = () => {
                                 onChange={(e) => setSelectedModel(e.target.value)}
                                 className="w-full bg-black/50 border border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
                             >
-                                {["SUMMA", "FUSE", "MESH", "HYPE", "GR4J", "FLASH", "All of the above"].map(m => <option key={m} value={m}>{m}</option>)}
+                                {["SUMMA", "FUSE", "GR", "NGEN"].map(m => <option key={m} value={m}>{m}</option>)}
                             </select>
                         </div>
-                        <button onClick={handleRunModels} className="w-full glass-button bg-blue-600/30 hover:bg-blue-600/50">
-                            Run Simulation
-                        </button>
+                        
+                        <div className="flex gap-2">
+                            <button onClick={() => handleRunModels("SIMULATION")} className="flex-1 glass-button bg-blue-600/30 hover:bg-blue-600/50 text-xs">
+                                Run Simulation
+                            </button>
+                            <button onClick={() => handleRunModels("CALIBRATION")} className="flex-1 glass-button bg-orange-600/30 hover:bg-orange-600/50 text-xs">
+                                Calibrate Model
+                            </button>
+                        </div>
                     </div>
                  )}
 
