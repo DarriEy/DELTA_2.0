@@ -411,8 +411,12 @@ async def text_to_speech(request: Request):
         if not text:
             raise HTTPException(status_code=400, detail="No text provided")
 
-        # Use the path to the credentials file directly
-        credentials_path = "/app/google-credentials.json"
+        # Get credentials path from environment variable or default to /app/google-credentials.json
+        credentials_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "/app/google-credentials.json")
+        
+        if not os.path.exists(credentials_path):
+             raise FileNotFoundError(f"Google credentials file not found at: {credentials_path}")
+
         credentials = service_account.Credentials.from_service_account_file(credentials_path)
 
         # Initialize the Text-to-Speech client
@@ -443,11 +447,21 @@ async def text_to_speech(request: Request):
     
 
 @router.options("/summary/{conversation_id}")
-async def options_summary(conversation_id: int):
+async def options_summary(conversation_id: int, request: Request):
+    origin = request.headers.get("Origin")
+    # Add your allowed origins here or import them from config
+    allowed_origins = [
+        "https://darriey.github.io",
+        "https://DarriEy.github.io",
+        "https://delta-backend-zom0.onrender.com",
+        "http://localhost:5173"
+    ]
+    allow_origin = origin if origin in allowed_origins else "https://delta-backend-zom0.onrender.com"
+    
     return Response(
         status_code=200,
         headers={
-            "Access-Control-Allow-Origin": "https://delta-h-frontend-b338f294b004.herokuapp.com",
+            "Access-Control-Allow-Origin": allow_origin,
             "Access-Control-Allow-Methods": "GET, OPTIONS",
             "Access-Control-Allow-Headers": "Content-Type, Authorization",
             "Access-Control-Allow-Credentials": "true",
