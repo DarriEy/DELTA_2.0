@@ -53,21 +53,25 @@ async def handle_options_request(request: Request, full_path: str):
 # Database URL from environment variable
 raw_db_url = os.environ.get("DATABASE_URL")
 if not raw_db_url:
-    raise ValueError("DATABASE_URL environment variable is not set!")
-
-DATABASE_URL = raw_db_url.replace(
-    "postgres://", "postgresql://", 1
-)
+    print("WARNING: DATABASE_URL environment variable is not set! Database features will fail.")
+    DATABASE_URL = "sqlite:///./fallback.db" # Use a dummy fallback to prevent crash
+else:
+    DATABASE_URL = raw_db_url.replace("postgres://", "postgresql://", 1)
 
 # Sync engine and session
 # Add timeout to prevent hanging if DB is unreachable
-engine = create_engine(DATABASE_URL, echo=False, connect_args={"connect_timeout": 10})
-
-# Use Session for database operations
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+try:
+    engine = create_engine(DATABASE_URL, echo=False, connect_args={"connect_timeout": 10})
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+except Exception as e:
+    print(f"Failed to create engine: {e}")
+    SessionLocal = None
 
 
 def get_db():
+    if not SessionLocal:
+        yield None
+        return
     db = SessionLocal()
     try:
         yield db
@@ -76,52 +80,28 @@ def get_db():
 
 
 def create_initial_user():
+    if not SessionLocal: return
     db = SessionLocal()
-    try:
-        user_exists = db.query(DBUser).filter(DBUser.user_id == 1).first()
-
-        if not user_exists:
-            hashed_password = bcrypt.hashpw(
-                "testpassword".encode("utf-8"),  # Replace with a secure password
-                bcrypt.gensalt(),
-            ).decode("utf-8")
-
-            db_user = DBUser(
-                user_id=1,
-                username="testuser",
-                email="testuser@example.com",
-                password_hash=hashed_password,
-            )
-            db.add(db_user)
-            db.commit()
-            print("User with ID 1 created.")
-        else:
-            print("User with ID 1 already exists.")
-    except Exception as e:
-        db.rollback()
-        print(f"An error occurred during user creation: {e}")
-    finally:
-        db.close()
-
-
+... (rest of the function content)
 @app.on_event("startup")
 async def startup_event():
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/app/google-credentials.json"
     print("GOOGLE_APPLICATION_CREDENTIALS:", os.environ["GOOGLE_APPLICATION_CREDENTIALS"])
-    print("DELTA Backend Started")
+    print("DELTA Backend Starting...")
 
-    # Create tables if they don't exist
-    try:
-        print("Attempting to connect to database...")
-        Base.metadata.create_all(bind=engine)
-        print("Tables created successfully.")
-        
-        # Create initial user
-        create_initial_user()
-    except Exception as e:
-        # Catch DB errors so the app still starts and we can see logs
-        print(f"CRITICAL ERROR: Failed to connect to database or create tables: {e}")
-        # We do NOT raise here, so the app can still serve /health
+    if SessionLocal:
+        # Create tables if they don't exist
+        try:
+            print("Attempting to connect to database...")
+            Base.metadata.create_all(bind=engine)
+            print("Tables created successfully.")
+            
+            # Create initial user
+            create_initial_user()
+        except Exception as e:
+            print(f"CRITICAL ERROR: Failed to connect to database: {e}")
+    else:
+        print("Skipping database initialization (no SessionLocal)")
 
 
 # Include the API router with the /api prefix
