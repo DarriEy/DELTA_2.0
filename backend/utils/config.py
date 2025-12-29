@@ -18,4 +18,6 @@ config = {
     
     # Scientific settings
     "HYDRO_MODEL_BASE_URL": os.environ.get("HYDRO_MODEL_BASE_URL", "http://localhost:8080"),
+    "SYMFLUENCE_CODE_DIR": os.environ.get("SYMFLUENCE_CODE_DIR", "/Users/darrieythorsson/compHydro/code/SYMFLUENCE"),
+    "SYMFLUENCE_DATA_DIR": os.environ.get("SYMFLUENCE_DATA_DIR", "/Users/darrieythorsson/compHydro/data/SYMFLUENCE_data"),
 }

@@ -14,7 +14,7 @@ import google.auth
 import google.auth.transport.requests
 import vertexai
 from vertexai.generative_models import GenerativeModel, Part, SafetySetting, HarmCategory, HarmBlockThreshold
-from anthropic import Anthropic, AnthropicError
+# from anthropic import Anthropic, AnthropicError  # Using Gemini instead
 from dotenv import load_dotenv
 
 from utils.config import config
@@ -35,8 +35,8 @@ logger = logging.getLogger(__name__)
 PROJECT_ID = config.get("PROJECT_ID")
 LOCATION = config.get("LOCATION", "us-central1")
 
-# Initialize Clients
-anthropic_client = Anthropic(api_key=config.get("ANTHROPIC_API_KEY"))
+# Initialize Clients - Use Gemini instead of Anthropic
+# anthropic_client = Anthropic(api_key=config.get("ANTHROPIC_API_KEY"))
 
 def init_vertex():
     """Initializes Vertex AI with the provided credentials."""
@@ -167,14 +167,9 @@ async def generate_anthropic_response(prompt: str, system_prompt: str) -> str:
 async def generate_response(user_input: str, role: str = "DELTA") -> str:
     """Main entry point for generating responses."""
     system_prompt = DELTA_SYSTEM_PROMPT if role == "DELTA" else EDUCATIONAL_GUIDE_PROMPT
-    preferred_model = config.get("LLM_MODEL", "").lower()
     
-    if "gemini" in preferred_model or not config.get("ANTHROPIC_API_KEY"):
-        return await generate_gemini_response(user_input, system_prompt)
-    else:
-        if role == "EDUCATIONAL_GUIDE":
-            return await generate_anthropic_with_tools(user_input, system_prompt)
-        return await generate_anthropic_response(user_input, system_prompt)
+    # Always use Gemini (free Google API)
+    return await generate_gemini_response(user_input, system_prompt)
 
 async def generate_anthropic_with_tools(user_input: str, system_prompt: str) -> str:
     """Handles Anthropic tool use for educational content."""
