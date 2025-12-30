@@ -11,7 +11,7 @@ PyYAML
 requests
 email-validator==2.1.0.post1
 Pillow
-Anthropic
+google-genai
 google-cloud-aiplatform
 openai
 requests

@@ -132,25 +132,6 @@ async def generate_gemini_response(prompt: str, system_prompt: str) -> str:
         logger.error(f"Free Gemini API Error: {e}")
         return f"Sorry, I encountered an error: {str(e)}"
 
-async def generate_anthropic_response(prompt: str, system_prompt: str) -> str:
-    """Generates a response using Anthropic Claude."""
-    try:
-        loop = asyncio.get_event_loop()
-        response = await loop.run_in_executor(
-            None,
-            partial(
-                anthropic_client.messages.create,
-                model=config.get("LLM_MODEL", "claude-3-sonnet-20240229"),
-                max_tokens=1024,
-                system=system_prompt,
-                messages=[{"role": "user", "content": prompt}],
-            )
-        )
-        return response.content[0].text
-    except AnthropicError as e:
-        logger.error(f"Anthropic Error: {e}")
-        return f"Claude Error: {str(e)}"
-
 async def generate_response(user_input: str, role: str = "DELTA") -> str:
     """Main entry point for generating responses."""
     system_prompt = DELTA_SYSTEM_PROMPT if role == "DELTA" else EDUCATIONAL_GUIDE_PROMPT
@@ -158,76 +139,10 @@ async def generate_response(user_input: str, role: str = "DELTA") -> str:
     # Always use Gemini (free Google API)
     return await generate_gemini_response(user_input, system_prompt)
 
-async def generate_anthropic_with_tools(user_input: str, system_prompt: str) -> str:
-    """Handles Anthropic tool use for educational content."""
-    functions = [
-        {
-            "name": "get_educational_content",
-            "description": "Provides educational content on a given hydrological topic.",
-            "input_schema": {
-                "type": "object",
-                "properties": {
-                    "topic": {
-                        "type": "string",
-                        "description": "The hydrological topic to explain (e.g., 'hydrological cycle', 'watershed').",
-                    },
-                },
-                "required": ["topic"],
-            },
-        }
-    ]
-
-    try:
-        response = anthropic_client.messages.create(
-            model=config.get("LLM_MODEL", "claude-3-sonnet-20240229"),
-            max_tokens=1024,
-            system=system_prompt,
-            messages=[{"role": "user", "content": user_input}],
-            tools=functions,
-        )
-
-        if response.content and response.content[0].type == "tool_use":
-            tool_call = response.content[0]
-            if tool_call.name == "get_educational_content":
-                topic = tool_call.input.get("topic")
-                content = get_educational_content(topic)
-
-                messages = [
-                    {"role": "user", "content": user_input},
-                    {
-                        "role": "assistant",
-                        "content": [
-                            {
-                                "type": "tool_use",
-                                "id": tool_call.id,
-                                "name": tool_call.name,
-                                "input": tool_call.input,
-                            },
-                            {"type": "text", "text": f"Retrieved content for {topic}: {content}"}
-                        ]
-                    }
-                ]
-
-                final_response = anthropic_client.messages.create(
-                    model=config.get("LLM_MODEL", "claude-3-sonnet-20240229"),
-                    max_tokens=1024,
-                    system=system_prompt,
-                    messages=messages,
-                )
-                return final_response.content[0].text
-
-        return response.content[0].text
-    except Exception as e:
-        logger.error(f"Error in Anthropic tools: {e}")
-        return f"Error: {str(e)}"
-
 async def generate_summary_from_messages(messages: List[Dict[str, str]]) -> str:
     """Generates a summary of a conversation."""
     formatted_messages = "\n".join([f"{msg['sender']}: {msg['content']}" for msg in messages])
     prompt = f"Please provide a concise scientific summary of the following conversation, highlighting key hydrological insights and action items:\n\n{formatted_messages}\n\nSummary:"
     
-    preferred_model = config.get("LLM_MODEL", "").lower()
-    if "gemini" in preferred_model or not config.get("ANTHROPIC_API_KEY"):
-        return await generate_gemini_response(prompt, "You are a professional hydrological research summarizer.")
-    else:
-        return await generate_anthropic_response(prompt, "You are a professional hydrological research summarizer.")
+    # Always use Gemini
+    return await generate_gemini_response(prompt, "You are a professional hydrological research summarizer.")
