@@ -151,12 +151,8 @@ async def google_health_check():
     return results
 
 
-# Include the API router with the /api prefix
+# Include the API router
 app.include_router(api_router)
-
-@app.get("/health")
-async def health_check():
-    return {"status": "ok", "message": "Backend is running"}
 
 @app.get("/")
 async def root():
