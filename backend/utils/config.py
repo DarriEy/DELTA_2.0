@@ -4,6 +4,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Also load from secure home directory env file
+home_env_path = os.path.expanduser("~/.env_delta")
+if os.path.exists(home_env_path):
+    load_dotenv(home_env_path)
+
 # Configuration settings
 config = {
     "ANTHROPIC_API_KEY": os.environ.get("ANTHROPIC_API_KEY"),

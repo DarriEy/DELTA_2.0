@@ -28,6 +28,11 @@ from modules.educational import get_educational_content
 
 load_dotenv()
 
+# Also load from secure home directory env file
+home_env_path = os.path.expanduser("~/.env_delta")
+if os.path.exists(home_env_path):
+    load_dotenv(home_env_path)
+
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

@@ -12,6 +12,12 @@ from .routes import router as api_router
 
 load_dotenv()
 
+# Also load from secure home directory env file
+import os
+home_env_path = os.path.expanduser("~/.env_delta")
+if os.path.exists(home_env_path):
+    load_dotenv(home_env_path)
+
 app = FastAPI(title="DELTA Orchestrator")
 
 # Configure CORS
