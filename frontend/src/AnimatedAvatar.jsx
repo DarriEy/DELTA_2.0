@@ -104,10 +104,14 @@ const AnimatedAvatar = () => {
         setGeneralBackgroundImageUrl(imageUrl);
       } else {
         console.warn('Falling back to default general background');
-        // optional: set a fallback background image here if available
+        // Use a gradient fallback when image generation fails
+        setGeneralBackgroundImageUrl('linear-gradient(135deg, #667eea 0%, #764ba2 100%)');
       }
     } catch (error) {
       console.error('Error generating background:', error);
+      // Use a gradient fallback when image generation fails
+      setGeneralBackgroundImageUrl('linear-gradient(135deg, #667eea 0%, #764ba2 100%)');
+    }
     } finally {
       setIsLoading(false);
     }
@@ -143,15 +147,9 @@ const AnimatedAvatar = () => {
     setConversationHistory(updatedHistory);
 
     try {
-      let conversationId = currentConversationId;
-      if (!conversationId) {
-        conversationId = await createNewConversation(activeMode);
-        if (!conversationId) return;
-        await new Promise((resolve) => setTimeout(resolve, 200));
-      }
-
-      let apiEndpoint = activeMode === 'educational' ? "/api/learn" : "/api/process";
-      const llmResponse = await sendToLLM(updatedHistory, apiEndpoint, conversationId);
+      // Simplified: directly call the API without conversation management
+      let apiEndpoint = activeMode === 'educational' ? "/api/learn" : "/api/learn";
+      const llmResponse = await sendToLLM(updatedHistory, apiEndpoint, null);
 
       if (llmResponse) {
          setConversationHistory(prev => [...prev, { role: "assistant", content: llmResponse }]);
@@ -275,9 +273,11 @@ const AnimatedAvatar = () => {
             setBackgroundImageUrl(url);
           } else {
             console.warn('Falling back to default educational background');
+            setBackgroundImageUrl('linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)');
           }
         } catch (e) {
           console.error('Error generating educational background:', e);
+          setBackgroundImageUrl('linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)');
         } finally {
           setIsLoading(false);
         }
@@ -295,9 +295,11 @@ const AnimatedAvatar = () => {
             setBackgroundImageModeling(url);
           } else {
             console.warn('Falling back to default modeling background');
+            setBackgroundImageModeling('linear-gradient(135deg, #667eea 0%, #764ba2 100%)');
           }
         } catch (e) {
           console.error('Error generating modeling background:', e);
+          setBackgroundImageModeling('linear-gradient(135deg, #667eea 0%, #764ba2 100%)');
         } finally {
           setIsLoading(false);
         }
@@ -315,9 +317,11 @@ const AnimatedAvatar = () => {
             setBackgroundImageDataAnalysis(url);
           } else {
             console.warn('Falling back to default data analysis background');
+            setBackgroundImageDataAnalysis('linear-gradient(135deg, #fa709a 0%, #fee140 100%)');
           }
         } catch (e) {
           console.error('Error generating data analysis background:', e);
+          setBackgroundImageDataAnalysis('linear-gradient(135deg, #fa709a 0%, #fee140 100%)');
         } finally {
           setIsLoading(false);
         }
