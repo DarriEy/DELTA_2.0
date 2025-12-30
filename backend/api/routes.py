@@ -76,43 +76,13 @@ def create_message_in_db(db, content, sender, conversation_id, message_index):
 
 
 @router.post("/learn")
-async def learn_input(
-    user_input: str = Body(...),
-    conversation_id: int = Body(...),
-    db: Session = Depends(get_db),
-):
+async def learn_input(user_input: str = Body(...)):
+    """Simplified learning endpoint without database dependency."""
     try:
-        # Get the conversation from the database
-        conversation = db.query(DBConversation).filter(
-            DBConversation.conversation_id == conversation_id
-        ).first()
-
-        if not conversation:
-            raise HTTPException(status_code=404, detail="Conversation not found")
-
-        # Fetch the last message index for this conversation
-        last_message_index = (
-            db.query(func.max(DBMessage.message_index))
-            .filter(DBMessage.conversation_id == conversation_id)
-            .scalar()
-        ) or 0
-
-        # Create a new message entry in the database for the user input
-        create_message_in_db(
-            db, user_input, "user", conversation_id, last_message_index + 1
-        )
-
         # Generate LLM response
-        llm_response = await generate_response(user_input, "EDUCATIONAL_GUIDE")
-
-        # Create a new message entry in the database for the LLM response
-        create_message_in_db(
-            db, llm_response, "assistant", conversation_id, last_message_index + 2
-        )
-
-        return {"llmResponse": llm_response}
+        llm_response = await generate_response(user_input, "DELTA")
+        return {"response": llm_response}
     except Exception as e:
-        db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
 

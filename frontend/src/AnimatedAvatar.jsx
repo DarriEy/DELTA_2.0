@@ -177,13 +177,12 @@ const AnimatedAvatar = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           user_input: lastMessage.content,
-          conversation_id: conversationId,
         }),
       });
 
       if (!response.ok) throw new Error("LLM API Error");
       const data = await response.json();
-      return data.llmResponse;
+      return data.response || data.llmResponse;
     } catch (error) {
       console.error("LLM Error:", error);
       return null;
