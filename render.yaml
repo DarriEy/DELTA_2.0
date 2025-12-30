@@ -12,6 +12,6 @@ services:
       - key: LOCATION
         value: us-central1
       - key: GOOGLE_API_KEY
-        value: AIzaSyC7e4a7Zfl4QAya0JjeiC1PHLaQgqrbqRU
+        sync: false
       - key: DATABASE_URL
         sync: false
