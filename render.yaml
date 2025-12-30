@@ -6,6 +6,12 @@ services:
     plan: free
     envVars:
       - key: GOOGLE_APPLICATION_CREDENTIALS
-        sync: false
+        value: google-credentials.json
+      - key: PROJECT_ID
+        value: marty-tts
+      - key: LOCATION
+        value: us-central1
+      - key: GOOGLE_API_KEY
+        value: AIzaSyC7e4a7Zfl4QAya0JjeiC1PHLaQgqrbqRU
       - key: DATABASE_URL
         sync: false
