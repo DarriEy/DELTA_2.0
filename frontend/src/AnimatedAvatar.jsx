@@ -77,29 +77,8 @@ const AnimatedAvatar = () => {
 
   // Update animations based on talking state
   useEffect(() => {
-    if (isTalking) {
-      setIsNodding(true);
-      const timeout = setTimeout(() => setIsNodding(false), 1000);
-      return () => clearTimeout(timeout);
-    }
+    setIsNodding(isTalking);
   }, [isTalking]);
-
-  const handleSpeechRecognitionResult = async (text) => {
-    if (!text) return;
-    setIsProcessing(true);
-    try {
-      const llmResponse = await sendMessage(text);
-      if (llmResponse) {
-         await speak(llmResponse);
-      }
-    } catch (error) {
-      console.error(error);
-      setIsShaking(true);
-      setTimeout(() => setIsShaking(false), 1000);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
 
   const handleAvatarClick = async () => {
     console.log("DELTA: Avatar clicked. State:", { introductionSpoken, isListening, isTalking });
@@ -110,6 +89,13 @@ const AnimatedAvatar = () => {
       try {
         await speak(greeting);
         setIntroductionSpoken(true);
+        // Automatically start listening after greeting
+        console.log("DELTA: Greeting finished, starting to listen...");
+        startListening(handleSpeechRecognitionResult, (error) => {
+          console.error(`Speech recognition error: ${error}`);
+          setIsShaking(true);
+          setTimeout(() => setIsShaking(false), 1000);
+        });
       } catch (err) {
         console.error("DELTA: Speech failed:", err);
       }
@@ -120,6 +106,27 @@ const AnimatedAvatar = () => {
         setIsShaking(true);
         setTimeout(() => setIsShaking(false), 1000);
       });
+    }
+  };
+
+  const handleSpeechRecognitionResult = async (text) => {
+    if (!text) return;
+    setIsProcessing(true);
+    try {
+      const llmResponse = await sendMessage(text);
+      if (llmResponse) {
+         await speak(llmResponse);
+         // Automatically listen again after Delta finishes talking
+         if (!isListening) {
+           startListening(handleSpeechRecognitionResult);
+         }
+      }
+    } catch (error) {
+      console.error(error);
+      setIsShaking(true);
+      setTimeout(() => setIsShaking(false), 1000);
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -326,8 +333,13 @@ const AnimatedAvatar = () => {
           25% { transform: translateX(-15px); }
           75% { transform: translateX(15px); }
         }
-        .nod-animation { animation: nod 0.6s ease-in-out 2; }
-        .shake-animation { animation: shake 0.6s ease-in-out 2; }
+        @keyframes pulse-red {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+          50% { box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); }
+        }
+        .nod-animation { animation: nod 0.6s ease-in-out infinite; }
+        .shake-animation { animation: shake 0.6s ease-in-out infinite; }
+        .listening-animation { animation: pulse-red 2s infinite; }
         .perspective-2000 { perspective: 2000px; }
         .preserve-3d { transform-style: preserve-3d; }
         .scrollbar-hide::-webkit-scrollbar { display: none; }

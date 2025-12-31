@@ -11,24 +11,31 @@ export const SpeechProvider = ({ children }) => {
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
+      console.log("DELTA: Speech recognition system initialized.");
       recognition.current = new SpeechRecognition();
       recognition.current.continuous = false;
       recognition.current.interimResults = false;
       recognition.current.lang = "en-US";
+    } else {
+      console.warn("DELTA: Speech recognition not supported in this browser.");
     }
   }, []);
 
   const startListening = useCallback((onResult, onError) => {
-    if (!recognition.current) return;
+    if (!recognition.current) {
+      console.error("DELTA: Cannot start listening - recognition not initialized.");
+      return;
+    }
 
     recognition.current.onresult = (event) => {
       const text = event.results[0][0].transcript;
+      console.log("DELTA: Speech result received:", text);
       onResult(text);
       setIsListening(false);
     };
 
     recognition.current.onerror = (event) => {
-      console.error("Speech recognition error:", event.error);
+      console.error("DELTA: Speech recognition error:", event.error);
       setIsListening(false);
       if (onError) onError(event.error);
     };
@@ -42,25 +49,35 @@ export const SpeechProvider = ({ children }) => {
   }, []);
 
   const speak = useCallback(async (text) => {
+    console.log("DELTA: Synthesizing speech for:", text.substring(0, 50) + "...");
     try {
       const audioContent = await generateSpeechFromText(text);
       if (audioContent) {
+        console.log("DELTA: Audio generated successfully, playing...");
         return new Promise((resolve) => {
           const audio = new Audio('data:audio/mp3;base64,' + audioContent);
           setIsTalking(true);
           audio.onended = () => {
+            console.log("DELTA: Audio playback ended.");
+            setIsTalking(false);
+            resolve();
+          };
+          audio.onerror = (e) => {
+            console.error("DELTA: Audio playback error:", e);
             setIsTalking(false);
             resolve();
           };
           audio.play().catch((e) => {
-            console.error('Autoplay prevented:', e);
+            console.error('DELTA: Autoplay prevented or failed:', e);
             setIsTalking(false);
             resolve();
           });
         });
+      } else {
+        console.error("DELTA: No audio content received from backend.");
       }
     } catch (error) {
-      console.error('Speech synthesis error:', error);
+      console.error('DELTA: Speech synthesis error:', error);
       setIsTalking(false);
     }
   }, []);

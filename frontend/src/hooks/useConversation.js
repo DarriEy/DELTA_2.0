@@ -27,13 +27,18 @@ export const useConversation = (initialMode = 'general') => {
 
   const sendMessage = useCallback(async (text, mode) => {
     setIsLoading(true);
+    // Add user message to history immediately for UI responsiveness
+    addMessage('user', text);
+    
     try {
-      // In AnimatedAvatar, it seems /api/learn was used for simplicity in some places
-      // but /api/process is the one that manages history in the backend.
-      // For now, let's keep the logic similar to what was there.
-      const endpoint = mode === 'educational' ? '/learn' : '/learn';
-      const data = await apiClient.post(endpoint, { user_input: text });
-      const llmResponse = data.response || data.llmResponse;
+      // Use /process if we have a conversation_id, otherwise fall back to /learn
+      const endpoint = currentConversationId ? '/process' : '/learn';
+      const payload = currentConversationId 
+        ? { user_input: text, conversation_id: currentConversationId }
+        : { user_input: text };
+
+      const data = await apiClient.post(endpoint, payload);
+      const llmResponse = data.llmResponse || data.response;
       
       if (llmResponse) {
         addMessage('assistant', llmResponse);
@@ -46,7 +51,7 @@ export const useConversation = (initialMode = 'general') => {
     } finally {
       setIsLoading(false);
     }
-  }, [addMessage]);
+  }, [addMessage, currentConversationId]);
 
   return {
     currentConversationId,

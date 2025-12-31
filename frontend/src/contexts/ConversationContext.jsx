@@ -35,9 +35,14 @@ export const ConversationProvider = ({ children }) => {
   }, []);
 
   const sendMessage = useCallback(async (text) => {
-    if (!currentConversationId) {
-        console.error("No conversation ID");
-        return null;
+    let conversationId = currentConversationId;
+    if (!conversationId) {
+        console.log("DELTA: No conversation ID found, creating one...");
+        conversationId = await createNewConversation(activeMode);
+        if (!conversationId) {
+            console.error("DELTA: Failed to create conversation on the fly.");
+            return null;
+        }
     }
     
     setIsLoading(true);
@@ -50,7 +55,7 @@ export const ConversationProvider = ({ children }) => {
       
       await apiClient.stream('/process_stream', { 
         user_input: text, 
-        conversation_id: currentConversationId 
+        conversation_id: conversationId 
       }, (chunk) => {
         fullResponse += chunk;
         setConversationHistory(prev => {

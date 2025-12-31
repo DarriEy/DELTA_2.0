@@ -23,6 +23,7 @@ const AvatarDisplay = ({
           ${isTalking ? 'scale-105' : 'hover:scale-102'}
           ${isNodding ? 'nod-animation' : ''}
           ${isShaking ? 'shake-animation' : ''}
+          ${isListening ? 'listening-animation' : ''}
         `}
       >
         {/* Subtle Ambient Glow */}

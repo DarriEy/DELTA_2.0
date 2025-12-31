@@ -1,4 +1,29 @@
-const API_BASE_URL = (import.meta.env?.VITE_APP_API_BASE_URL || 'https://delta-backend-zom0.onrender.com') + '/api';
+const getApiBaseUrl = () => {
+  const envUrl = import.meta.env?.VITE_APP_API_BASE_URL;
+  const hostname = window.location.hostname;
+  const RENDER_URL = 'https://delta-backend-zom0.onrender.com';
+  
+  // 1. Local Development
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    // If we're local but the env says Heroku/Render, use local backend instead
+    if (!envUrl || envUrl.includes('herokuapp.com') || envUrl.includes('onrender.com')) {
+      return 'http://localhost:8000/api';
+    }
+    return envUrl + '/api';
+  }
+  
+  // 2. Production (GitHub Pages)
+  if (hostname.includes('github.io')) {
+    // Prefer Render over Heroku if both are present or env is missing
+    if (!envUrl || envUrl.includes('herokuapp.com')) {
+      return RENDER_URL + '/api';
+    }
+  }
+  
+  return (envUrl || RENDER_URL) + '/api';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 const handleResponse = async (response) => {
   if (!response.ok) {
