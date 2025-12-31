@@ -48,6 +48,7 @@ const AnimatedAvatar = () => {
   const isLoading = isConversationLoading || isBackgroundLoading;
   const avatarRef = useRef(null);
 
+  // --- Initial Setup ---
   useEffect(() => {
     const init = async () => {
       const imagePrompt = 'Please, render a highly detailed photorealistic, 4K image of a natural landscape showcasing a beautiful hydrological landscape feature. The setting should be a breathtaking natural environment. Emphasize realistic lighting, textures, and reflections in the water. Style should render with sharp focus and intricate details. Use a 16:9 aspect ratio.';
@@ -61,12 +62,13 @@ const AnimatedAvatar = () => {
   }, []);
 
   const handleSpeechRecognitionResult = async (text) => {
-// ...
     if (!text) return;
     setIsProcessing(true);
     try {
       const llmResponse = await sendMessage(text);
-      if (llmResponse) await speak(llmResponse);
+      if (llmResponse) {
+         await speak(llmResponse);
+      }
     } catch (error) {
       console.error(error);
     } finally {
@@ -76,29 +78,53 @@ const AnimatedAvatar = () => {
 
   const handleAvatarClick = () => {
     if (!introductionSpoken) {
-      speak("Delta online. How can I assist your research today?").then(() => setIntroductionSpoken(true));
+      speak("Hi I'm Delta, your personal hydrological research assistant. How should we save the world today?")
+        .then(() => setIntroductionSpoken(true));
     } else if (!isListening) {
-      startListening(handleSpeechRecognitionResult, (e) => console.error(e));
+      startListening(handleSpeechRecognitionResult, (error) => {
+        console.error(`Speech recognition error: ${error}`);
+      });
     }
   };
 
   const switchMode = async (mode) => {
     if (activeMode === mode) return;
+    
     setShowContentFrame(false); 
     setActiveMode(mode);
-    if (mode === 'educational') setCurrentEducationalContent(educationalContent.hydrology101);
-    else if (mode === 'modeling') setCurrentModelingContent(modelingContent.intro);
-    else if (mode === 'dataAnalysis') setCurrentDataAnalysisContent(dataAnalysisContent.intro);
+
+    if (mode === 'educational') {
+      setCurrentEducationalContent(educationalContent.hydrology101);
+      if (!backgrounds.educational) {
+        const prompt = 'Please generate a photorealistic image of a university classroom from the perspective of a student...';
+        await generateBackground('educational', prompt);
+      }
+    } else if (mode === 'modeling') {
+      setCurrentModelingContent(modelingContent.intro);
+      if (!backgrounds.modeling) {
+        const prompt = 'Please create a photorealistic image of the interior of an advanced hydrological monitoring space...';
+        await generateBackground('modeling', prompt);
+      }
+    } else if (mode === 'dataAnalysis') {
+      setCurrentDataAnalysisContent(dataAnalysisContent.intro);
+      if (!backgrounds.dataAnalysis) {
+        const prompt = 'Please generate a photorealistic, top-down view of a modern, hydrological data analysis idea board...';
+        await generateBackground('dataAnalysis', prompt);
+      }
+    }
     setShowContentFrame(true);
   };
 
   const handleModelingJobSubmit = async () => {
     try {
       setIsProcessing(true);
-      await apiClient.post('/run_modeling', { model: selectedModel, job_type: "SIMULATION" });
-      setJobStatus("RUNNING");
+      const data = await apiClient.post('/run_modeling', {
+        model: selectedModel,
+        job_type: "SIMULATION"
+      });
+      setJobStatus("PENDING");
     } catch (error) {
-      console.error(error);
+      console.error("Modeling Error:", error);
     } finally {
       setIsProcessing(false);
     }
@@ -112,7 +138,7 @@ const AnimatedAvatar = () => {
       setSummaryText(data.summary);
       setShowSummaryModal(true);
     } catch (error) {
-      console.error(error);
+      console.error("Summary Error:", error);
     } finally {
       setIsProcessing(false);
     }
@@ -132,21 +158,25 @@ const AnimatedAvatar = () => {
       className="min-h-screen w-screen flex flex-col items-center justify-center font-sans text-white selection:bg-blue-500/30 transition-all duration-1000"
       style={{
         background: getBackground()?.startsWith('data:') || getBackground()?.startsWith('http') 
-          ? `radial-gradient(circle at center, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.95) 100%), url(${getBackground()}) center/cover no-repeat` 
+          ? `radial-gradient(circle at center, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.9) 100%), url(${getBackground()}) center/cover no-repeat` 
           : getBackground() || '#050505',
       }}
     >
       
-      {/* Minimal Header */}
-      <header className="absolute top-0 left-0 right-0 z-30 px-12 py-12 flex justify-between items-center border-b border-white/[0.03]">
-        <div className="flex items-center gap-4">
-          <img src={dropletAvatar} alt="Logo" className="w-8 h-8 opacity-80" />
-          <h1 className="text-xl font-medium tracking-tight text-white/90">
-            DELTA <span className="text-white/30 font-light">RESEARCH</span>
-          </h1>
-        </div>
-        <div className="text-[10px] uppercase tracking-[0.3em] text-white/20 font-medium">
-          v2.5.0 • SECURE NODE
+      {/* HUD Header */}
+      <header className="absolute top-0 left-0 right-0 z-30 px-12 py-10 flex justify-between items-center pointer-events-none">
+        <div className="flex items-center gap-6 pointer-events-auto group">
+          <div className="relative">
+             <div className="w-12 h-12 rounded-xl bg-white/5 backdrop-blur-3xl border border-white/10 flex items-center justify-center overflow-hidden relative z-10">
+                <img src={dropletAvatar} alt="Logo" className="w-8 h-8 opacity-80" />
+             </div>
+          </div>
+          <div>
+            <h1 className="text-xl font-bold tracking-tighter text-white uppercase italic">
+              DELTA <span className="text-blue-500 not-italic font-light">2.5</span>
+            </h1>
+            <span className="text-[8px] font-bold text-white/20 uppercase tracking-[0.4em]">Integrated Intelligence</span>
+          </div>
         </div>
       </header>
 
@@ -168,9 +198,9 @@ const AnimatedAvatar = () => {
         </div>
 
         {/* Workspace */}
-        <div className="lg:col-span-8 flex flex-col gap-8 h-[600px]">
+        <div className="lg:col-span-8 flex flex-col gap-8 h-[600px] justify-center">
           <ChatPanel />
-          <div className={`transition-all duration-500 flex-1 bg-white/[0.02] border border-white/[0.05] rounded-3xl p-8 overflow-y-auto ${showContentFrame ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
+          <div className={`transition-all duration-700 flex-1 bg-white/[0.02] border border-white/[0.05] rounded-3xl p-10 overflow-y-auto scrollbar-hide ${showContentFrame ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
             {activeMode === 'educational' && <EducationalPanel content={currentEducationalContent} />}
             {activeMode === 'modeling' && (
               <ModelingPanel 
@@ -188,7 +218,7 @@ const AnimatedAvatar = () => {
                 <div className="space-y-2">
                   <h4 className="text-xl font-light uppercase tracking-[0.3em]">Command Center</h4>
                   <p className="text-xs text-white/30 tracking-widest leading-relaxed">
-                    Select a research node from the navigation menu<br/>to begin hydrological simulations.
+                    Select a research node to begin.
                   </p>
                 </div>
               </div>
@@ -198,24 +228,27 @@ const AnimatedAvatar = () => {
       </main>
 
       {/* Subtle Footer */}
-      <footer className="absolute bottom-12 left-12 right-12 z-20 flex justify-between items-center text-[10px] uppercase tracking-[0.2em] text-white/10 font-medium">
+      <footer className="absolute bottom-12 left-12 right-12 z-20 flex justify-between items-center text-[9px] uppercase tracking-[0.3em] text-white/10 font-medium">
         <div>© 2025 HYDROLOGICAL UNIT</div>
         <div className="flex gap-8">
           <span>LATENCY: 12MS</span>
-          <span>SSL: ENCRYPTED</span>
+          <span>SSL: SECURE</span>
         </div>
       </footer>
 
       {showSummaryModal && <SummaryModal summary={summaryText} onClose={() => setShowSummaryModal(false)} />}
 
       <style dangerouslySetInnerHTML={{ __html: `
-        @keyframes nod { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
-        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
-        .nod-animation { animation: nod 0.5s ease-in-out 2; }
-        .shake-animation { animation: shake 0.5s ease-in-out 2; }
+        @keyframes nod { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-10px); } 75% { transform: translateX(10px); } }
+        .nod-animation { animation: nod 0.6s ease-in-out 2; }
+        .shake-animation { animation: shake 0.6s ease-in-out 2; }
+        .perspective-2000 { perspective: 2000px; }
+        .preserve-3d { transform-style: preserve-3d; }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .markdown-content p { margin-bottom: 1rem; color: rgba(255,255,255,0.7); }
-        .markdown-content code { background: rgba(255,255,255,0.05); padding: 0.2rem 0.4rem; border-radius: 4px; color: #60a5fa; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        .markdown-content p { margin-bottom: 1rem; color: rgba(255,255,255,0.8); }
+        .markdown-content code { background: rgba(255,255,255,0.05); padding: 0.2rem 0.4rem; border-radius: 6px; color: #60a5fa; }
       `}} />
     </div>
   );

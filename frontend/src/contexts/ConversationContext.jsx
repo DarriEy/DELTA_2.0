@@ -46,7 +46,7 @@ export const ConversationProvider = ({ children }) => {
       // Create a placeholder for the assistant's message in the UI
       setConversationHistory(prev => [...prev, { role: 'assistant', content: '' }]);
       
-      await apiClient.stream('/api/process_stream', { 
+      await apiClient.stream('/process_stream', { 
         user_input: text, 
         conversation_id: currentConversationId 
       }, (chunk) => {

@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env?.VITE_APP_API_BASE_URL || 'https://delta-backend-zom0.onrender.com';
+const API_BASE_URL = (import.meta.env?.VITE_APP_API_BASE_URL || 'https://delta-backend-zom0.onrender.com') + '/api';
 
 const handleResponse = async (response) => {
   if (!response.ok) {
