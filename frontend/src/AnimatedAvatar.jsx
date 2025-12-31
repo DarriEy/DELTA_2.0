@@ -143,10 +143,9 @@ const AnimatedAvatar = () => {
     bufferedText.current = ""; // Reset buffer for new response
     
     try {
-      const streamGenerator = sendMessage(text);
-      for await (const chunk of streamGenerator) {
-        processTextChunk(chunk);
-      }
+      // Call sendMessage with the onChunkReceived callback
+      const llmResponse = await sendMessage(text, processTextChunk); 
+
       // After stream ends, speak any remaining buffered text
       if (bufferedText.current.trim()) {
         setSpeechQueue(prev => [...prev, bufferedText.current.trim()]);
@@ -171,8 +170,6 @@ const AnimatedAvatar = () => {
       setTimeout(() => setIsShaking(false), 1000);
       setIsProcessing(false); // Ensure processing is stopped on error
     } finally {
-      // setIsProcessing(false) will be called when the entire process is done,
-      // or after an error. Keep it here for clarity.
       setIsProcessing(false);
     }
   };

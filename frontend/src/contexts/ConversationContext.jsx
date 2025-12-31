@@ -34,14 +34,14 @@ export const ConversationProvider = ({ children }) => {
     setConversationHistory(prev => [...prev, { role, content }]);
   }, []);
 
-  const sendMessage = useCallback(async function* (text) { // Changed to async generator
+  const sendMessage = useCallback(async (text, onChunkReceived) => { // Changed back to async function, added onChunkReceived
     let conversationId = currentConversationId;
     if (!conversationId) {
         console.log("DELTA: No conversation ID found, creating one...");
         conversationId = await createNewConversation(activeMode);
         if (!conversationId) {
             console.error("DELTA: Failed to create conversation on the fly.");
-            return; // Use return for generator to stop
+            return; // Use return for async function
         }
     }
     
@@ -51,12 +51,11 @@ export const ConversationProvider = ({ children }) => {
     try {
       let fullResponse = '';
       // Create a placeholder for the assistant's message in the UI
-      setConversationHistory(prev => [...prev.filter(msg => msg.content !== ''), { role: 'assistant', content: '' }]); // Filter out potential empty messages
+      setConversationHistory(prev => [...prev.filter(msg => msg.content !== ''), { role: 'assistant', content: '' }]);
       
       const updateMessage = (newContent) => {
         setConversationHistory(prev => {
           const newHistory = [...prev];
-          // Ensure we update the last assistant message
           const lastAssistantMessageIndex = newHistory.findLastIndex(msg => msg.role === 'assistant');
           if (lastAssistantMessageIndex !== -1) {
             newHistory[lastAssistantMessageIndex].content = newContent;
@@ -71,21 +70,15 @@ export const ConversationProvider = ({ children }) => {
       }, (chunk) => {
         fullResponse += chunk;
         updateMessage(fullResponse);
-        // Yield each chunk as it comes in
-        // console.log("sendMessage yield chunk:", chunk); // For debugging
-        // Use yield* to delegate to another async generator if needed, or simply yield chunk
-        // For now, yield the current full response to track progress, but the caller will decide what to speak
-        // For actual streaming speech, we need to yield smaller, actionable chunks or process sentence boundaries here.
-        // For now, let's yield the chunk and let AnimatedAvatar decide when to speak.
-        yield chunk; // Yield the chunk directly
+        if (onChunkReceived) {
+          onChunkReceived(chunk); // Call the callback with the chunk
+        }
       });
       
-      // After the stream ends, ensure any remaining content is yielded
-      // The last updateMessage already handled the fullResponse.
+      return fullResponse; // Return the full response after stream ends
       
     } catch (error) {
       console.error('Failed to send streaming message:', error);
-      // It's good practice for generators to re-raise or yield an error state if they fail
       throw error;
     } finally {
       setIsLoading(false);
