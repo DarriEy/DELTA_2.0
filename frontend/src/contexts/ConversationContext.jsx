@@ -10,17 +10,19 @@ export const ConversationProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const createNewConversation = useCallback(async (mode, userId = 1) => {
+  const createNewConversation = useCallback(async (mode, userId = 101) => {
     setIsLoading(true);
     setError(null);
+    console.log("DELTA: Creating conversation for mode:", mode);
     try {
       const data = await apiClient.post('/conversations/', { active_mode: mode, user_id: userId });
+      console.log("DELTA: Conversation established:", data.conversation_id);
       setCurrentConversationId(data.conversation_id);
       setConversationHistory([]);
       setActiveMode(mode);
       return data.conversation_id;
     } catch (error) {
-      console.error('Failed to create conversation:', error);
+      console.error('DELTA: Failed to create conversation:', error);
       setError('Connection failed. Please check your network.');
       return null;
     } finally {

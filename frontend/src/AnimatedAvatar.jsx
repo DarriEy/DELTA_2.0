@@ -51,11 +51,25 @@ const AnimatedAvatar = () => {
   // --- Initial Setup ---
   useEffect(() => {
     const init = async () => {
-      const imagePrompt = 'Please, render a highly detailed photorealistic, 4K image of a natural landscape showcasing a beautiful hydrological landscape feature. The setting should be a breathtaking natural environment. Emphasize realistic lighting, textures, and reflections in the water. Style should render with sharp focus and intricate details. Use a 16:9 aspect ratio.';
-      generateBackground('general', imagePrompt);
+      console.log("DELTA: Initializing core systems...");
       
-      if (!currentConversationId) {
-        await createNewConversation('general');
+      try {
+        // 1. Establish Secure Neural Link (Conversation)
+        let convId = currentConversationId;
+        if (!convId) {
+          console.log("DELTA: Creating new secure conversation...");
+          convId = await createNewConversation('general');
+        }
+
+        // 2. Render Initial Environment (Background)
+        if (convId) {
+          const imagePrompt = 'Please, render a highly detailed photorealistic, 4K image of a natural landscape showcasing a beautiful hydrological landscape feature. The setting should be a breathtaking natural environment. Emphasize realistic lighting, textures, and reflections in the water. Style should render with sharp focus and intricate details. Use a 16:9 aspect ratio.';
+          console.log("DELTA: Generating environmental background...");
+          generateBackground('general', imagePrompt);
+        }
+        
+      } catch (err) {
+        console.error("DELTA: Initialization failure:", err);
       }
     };
     init();
@@ -87,11 +101,20 @@ const AnimatedAvatar = () => {
     }
   };
 
-  const handleAvatarClick = () => {
+  const handleAvatarClick = async () => {
+    console.log("DELTA: Avatar clicked. State:", { introductionSpoken, isListening, isTalking });
+    
     if (!introductionSpoken) {
-      speak("Hi I'm Delta, your personal hydrological research assistant. How should we save the world today?")
-        .then(() => setIntroductionSpoken(true));
-    } else if (!isListening) {
+      const greeting = "Hi I'm Delta, your personal hydrological research assistant. How should we save the world today?";
+      console.log("DELTA: Speaking introduction...");
+      try {
+        await speak(greeting);
+        setIntroductionSpoken(true);
+      } catch (err) {
+        console.error("DELTA: Speech failed:", err);
+      }
+    } else if (!isListening && !isTalking) {
+      console.log("DELTA: Starting speech recognition...");
       startListening(handleSpeechRecognitionResult, (error) => {
         console.error(`Speech recognition error: ${error}`);
         setIsShaking(true);
