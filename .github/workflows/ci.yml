@@ -14,7 +14,11 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.11'
+        python-version: '3.12'
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libgdal-dev libproj-dev libgeos-dev gdal-bin libnetcdf-dev
     - name: Install dependencies
       run: |
         cd backend
@@ -29,9 +33,6 @@ jobs:
       run: |
         echo "Running backend health tests..."
         cd backend
-        # List files to verify __init__.py existence in CI
-        ls -R modules/ utils/
-        # Attempt to import specifically to narrow down the failure
         PYTHONPATH=. python -c "import modules.modeling; print('Modules modeling imported')"
         PYTHONPATH=. python -c "from api.main import app; print('App imported successfully')"
 
