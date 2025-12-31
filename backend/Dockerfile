@@ -37,9 +37,6 @@ COPY utils /app/utils
 # Copy modules
 COPY modules /app/modules
 
-# Copy the google-credentials.json file
-COPY google-credentials.json /app/google-credentials.json
-
 # Expose the port that the application will run on
 EXPOSE 8000
 
