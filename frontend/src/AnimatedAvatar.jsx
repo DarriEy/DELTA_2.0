@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useConversation } from "./contexts/ConversationContext";
 import { useSpeech } from "./contexts/SpeechContext";
 import { useBackgrounds } from "./hooks/useBackgrounds";
@@ -87,16 +87,14 @@ const AnimatedAvatar = () => {
       const greeting = "Hi I'm Delta, your personal hydrological research assistant. How should we save the world today?";
       console.log("DELTA: Speaking introduction...");
       try {
-        await speak(greeting);
-        setIntroductionSpoken(true);
-        // Automatically start listening after greeting
-        console.log("DELTA: Greeting finished, starting to listen...");
-        startListening(handleSpeechRecognitionResult, (error) => {
-          console.error(`Speech recognition error: ${error}`);
-          setIsShaking(true);
-          setTimeout(() => setIsShaking(false), 1000);
-        });
-      } catch (err) {
+                await speak(greeting);
+                setIntroductionSpoken(true);
+                console.log("DELTA: Greeting finished, starting to listen...");
+                startListening(handleSpeechRecognitionResult, (error) => {
+                  console.error(`DELTA: Speech recognition error during initial listen: ${error}`);
+                  setIsShaking(true);
+                  setTimeout(() => setIsShaking(false), 1000);
+                });      } catch (err) {
         console.error("DELTA: Speech failed:", err);
       }
     } else if (!isListening && !isTalking) {
@@ -109,23 +107,72 @@ const AnimatedAvatar = () => {
     }
   };
 
+  const [speechQueue, setSpeechQueue] = useState([]);
+  const [isSpeakingChunk, setIsSpeakingChunk] = useState(false);
+  const bufferedText = useRef("");
+  const sentenceEndings = /[.!?。？！]/; // Add more if necessary for other languages or specific needs
+
+  // Effect to process the speech queue
+  useEffect(() => {
+    if (speechQueue.length > 0 && !isSpeakingChunk) {
+      const nextSentence = speechQueue[0];
+      setIsSpeakingChunk(true);
+      speak(nextSentence).then(() => {
+        setSpeechQueue(prev => prev.slice(1));
+        setIsSpeakingChunk(false);
+      });
+    }
+  }, [speechQueue, isSpeakingChunk, speak]);
+
+  const processTextChunk = useCallback((chunk) => {
+    bufferedText.current += chunk;
+    let match;
+    // Process sentences as they complete
+    while ((match = bufferedText.current.match(sentenceEndings))) {
+      const sentence = bufferedText.current.substring(0, match.index + 1).trim();
+      if (sentence) {
+        setSpeechQueue(prev => [...prev, sentence]);
+      }
+      bufferedText.current = bufferedText.current.substring(match.index + 1);
+    }
+  }, []);
+
   const handleSpeechRecognitionResult = async (text) => {
     if (!text) return;
     setIsProcessing(true);
+    bufferedText.current = ""; // Reset buffer for new response
+    
     try {
-      const llmResponse = await sendMessage(text);
-      if (llmResponse) {
-         await speak(llmResponse);
-         // Automatically listen again after Delta finishes talking
-         if (!isListening) {
-           startListening(handleSpeechRecognitionResult);
-         }
+      const streamGenerator = sendMessage(text);
+      for await (const chunk of streamGenerator) {
+        processTextChunk(chunk);
       }
+      // After stream ends, speak any remaining buffered text
+      if (bufferedText.current.trim()) {
+        setSpeechQueue(prev => [...prev, bufferedText.current.trim()]);
+        bufferedText.current = "";
+      }
+
+      // Automatically listen again after Delta finishes talking and the speech queue is empty
+      // This will be triggered by the useEffect that processes speechQueue
+      const checkAndStartListening = () => {
+        if (speechQueue.length === 0 && !isSpeakingChunk && !isListening) {
+          console.log("DELTA: Speech queue empty, starting to listen again...");
+          startListening(handleSpeechRecognitionResult);
+        } else {
+          setTimeout(checkAndStartListening, 500); // Check again after a short delay
+        }
+      };
+      checkAndStartListening();
+
     } catch (error) {
       console.error(error);
       setIsShaking(true);
       setTimeout(() => setIsShaking(false), 1000);
+      setIsProcessing(false); // Ensure processing is stopped on error
     } finally {
+      // setIsProcessing(false) will be called when the entire process is done,
+      // or after an error. Keep it here for clarity.
       setIsProcessing(false);
     }
   };
