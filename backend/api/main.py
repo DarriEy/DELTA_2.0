@@ -135,10 +135,10 @@ async def startup_event():
             
             # Create initial user
             create_initial_user()
-            except Exception as e:
-                print(f"CRITICAL ERROR: Failed to connect to database: {e}")
-            else:
-                print("Skipping database initialization (no SessionLocal)")
+        except Exception as e:
+            print(f"CRITICAL ERROR: Failed to connect to database: {e}")
+    else:
+        print("Skipping database initialization (no SessionLocal)")
         
         
         # Include the modular routers with /api prefix
