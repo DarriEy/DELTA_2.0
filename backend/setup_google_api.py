@@ -66,22 +66,48 @@ def main():
     
     # Test TTS
     try:
-        os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = creds_file
         from utils.google_utils import get_tts_client
         client = get_tts_client()
+        # Simple test call
+        from google.cloud import texttospeech
+        synthesis_input = texttospeech.SynthesisInput(text="Test")
+        voice = texttospeech.VoiceSelectionParams(language_code="en-US", ssml_gender=texttospeech.SsmlVoiceGender.NEUTRAL)
+        audio_config = texttospeech.AudioConfig(audio_encoding=texttospeech.AudioEncoding.MP3)
+        client.synthesize_speech(input=synthesis_input, voice=voice, audio_config=audio_config)
         print("✅ Google TTS: Working")
     except Exception as e:
         print(f"❌ Google TTS: {e}")
     
-    # Test free Gemini API
-    if google_api_key or os.environ.get('GOOGLE_API_KEY'):
-        try:
-            import google.genai as genai
-            genai.configure(api_key=google_api_key or os.environ.get('GOOGLE_API_KEY'))
-            client = genai.Client()
-            print("✅ Free Gemini API: Working")
-        except Exception as e:
-            print(f"❌ Free Gemini API: {e}")
+    # Test Gemini via Vertex or AI Studio
+    try:
+        from api.llm_integration import generate_response
+        import asyncio
+        
+        # We need to run this in an event loop
+        async def test_gen():
+            return await generate_response("Hello", role="DELTA")
+        
+        response = asyncio.run(test_gen())
+        if "Error" not in response:
+            print(f"✅ Gemini (via {'Vertex AI' if os.environ.get('PROJECT_ID') else 'AI Studio'}): Working")
+        else:
+            print(f"❌ Gemini: {response}")
+    except Exception as e:
+        print(f"❌ Gemini: {e}")
+    
+    # Test Image Generation
+    try:
+        from api.llm_integration import generate_image
+        async def test_img():
+            return await generate_image("A small blue marble")
+        
+        img_url = asyncio.run(test_img())
+        if img_url:
+            print("✅ Imagen (Vertex AI): Working")
+        else:
+            print("❌ Imagen (Vertex AI): Failed to generate image")
+    except Exception as e:
+        print(f"❌ Imagen: {e}")
     
     print("\n🎉 Setup complete!")
 

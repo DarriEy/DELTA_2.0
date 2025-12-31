@@ -143,21 +143,25 @@ async def startup_event():
 @app.get("/health/google")
 async def google_health_check():
     """Checks the status of Google service integration."""
+    from utils.config import config
+    project_id = config.get("PROJECT_ID")
+    google_api_key = config.get("GOOGLE_API_KEY")
+    
     results = {
         "generative_ai": "unknown",
-        "vertex_ai": "unknown",
+        "vertex_ai": "ok" if project_id else "not_configured",
         "credentials_found": os.path.exists(os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "")),
+        "project_id": project_id
     }
     
     try:
-        import google.generativeai as genai
-        from .llm_integration import GOOGLE_API_KEY
-        if GOOGLE_API_KEY:
-            # Quick test of the API
-            model = genai.GenerativeModel('gemini-1.5-flash')
+        from api.llm_integration import generate_response
+        # Quick test of the API
+        response = await generate_response("health check")
+        if "Error" not in response:
             results["generative_ai"] = "ok"
         else:
-            results["generative_ai"] = "missing_api_key"
+            results["generative_ai"] = f"error: {response}"
     except Exception as e:
         results["generative_ai"] = f"error: {str(e)}"
 
