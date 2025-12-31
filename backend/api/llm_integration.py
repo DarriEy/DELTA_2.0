@@ -113,41 +113,70 @@ async def generate_image(prompt: str) -> Optional[str]:
         logger.error(f"Error generating image: {e}")
         return None
 
-async def generate_gemini_response(prompt: str, system_prompt: str) -> str:
-    """Generates a response using free Gemini API."""
-    try:
-        # Use free Gemini API
-        api_key = config.get("GOOGLE_API_KEY")
-        if not api_key:
-            return "Google API key not configured. Please set GOOGLE_API_KEY."
-        
-        # Create client with API key
-        client = genai.Client(api_key=api_key)
-        
-        # Combine system prompt with user prompt
-        full_prompt = f"{system_prompt}\n\nUser: {prompt}\nAssistant:"
-        
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=full_prompt
-        )
-        return response.text
-        
-    except Exception as e:
-        logger.error(f"Free Gemini API Error: {e}")
-        return f"Sorry, I encountered an error: {str(e)}"
+from .llm_providers import get_llm_provider
+
+
 
 async def generate_response(user_input: str, role: str = "DELTA") -> str:
+
+
+
     """Main entry point for generating responses."""
+
+
+
     system_prompt = DELTA_SYSTEM_PROMPT if role == "DELTA" else EDUCATIONAL_GUIDE_PROMPT
-    
-    # Always use Gemini (free Google API)
-    return await generate_gemini_response(user_input, system_prompt)
+
+
+
+    provider = get_llm_provider()
+
+
+
+    return await provider.generate_response(user_input, system_prompt)
+
+
+
+
+
+
+
+async def generate_stream(user_input: str, role: str = "DELTA"):
+
+
+
+    """Main entry point for generating streaming responses."""
+
+
+
+    system_prompt = DELTA_SYSTEM_PROMPT if role == "DELTA" else EDUCATIONAL_GUIDE_PROMPT
+
+
+
+    provider = get_llm_provider()
+
+
+
+    async for chunk in provider.generate_response_stream(user_input, system_prompt):
+
+
+
+        yield chunk
+
+
+
+
+
+
 
 async def generate_summary_from_messages(messages: List[Dict[str, str]]) -> str:
+
     """Generates a summary of a conversation."""
+
     formatted_messages = "\n".join([f"{msg['sender']}: {msg['content']}" for msg in messages])
+
     prompt = f"Please provide a concise scientific summary of the following conversation, highlighting key hydrological insights and action items:\n\n{formatted_messages}\n\nSummary:"
-    
-    # Always use Gemini
-    return await generate_gemini_response(prompt, "You are a professional hydrological research summarizer.")
+
+    provider = get_llm_provider()
+
+    return await provider.generate_response(prompt, "You are a professional hydrological research summarizer.")

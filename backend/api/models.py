@@ -83,7 +83,7 @@ class Message(Base):
     message_id = Column(Integer, unique=True, index=True)
     conversation_id = Column(Integer, index=True)
     message_index = Column(Integer, index=True)
-    sender = Column(String)
+    sender = Column(String, index=True)
     content = Column(String)
     timestamp = Column(DateTime(timezone=True), server_default=func.now())
 

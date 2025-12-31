@@ -1,6 +1,6 @@
 .env
 marty-tts-74c202d4f256.json
-*.json.venv/
+credentials-base64.txt
 .venv/
 *.pyc
 __pycache__/

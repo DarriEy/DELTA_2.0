@@ -19,13 +19,23 @@ logger = logging.getLogger(__name__)
 def get_credentials():
     """
     Centralized credential retrieval.
-    1. Checks for GOOGLE_CREDENTIALS_BASE64
-    2. Checks for JSON file path
-    3. Falls back to default credentials
+    1. Checks for GOOGLE_CREDENTIALS_JSON (Raw JSON string)
+    2. Checks for GOOGLE_CREDENTIALS_BASE64
+    3. Checks for JSON file path
+    4. Falls back to default credentials
     """
     scopes = ["https://www.googleapis.com/auth/cloud-platform"]
 
-    # 1. Base64 encoded JSON
+    # 1. Raw JSON string
+    raw_json = os.environ.get("GOOGLE_CREDENTIALS_JSON")
+    if raw_json:
+        try:
+            creds_dict = json.loads(raw_json)
+            return service_account.Credentials.from_service_account_info(creds_dict, scopes=scopes)
+        except Exception as e:
+            logger.error(f"Error parsing GOOGLE_CREDENTIALS_JSON: {e}")
+
+    # 2. Base64 encoded JSON
     base64_creds = os.environ.get("GOOGLE_CREDENTIALS_BASE64")
     if base64_creds:
         try:
