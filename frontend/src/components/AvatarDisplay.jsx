@@ -11,36 +11,59 @@ const AvatarDisplay = ({
   dropletAvatar 
 }) => {
   const { isTalking, isListening } = useSpeech();
+  
   return (
-    <div className="relative group perspective-1000">
+    <div className="relative group perspective-2000 py-12">
       <div 
         ref={avatarRef}
         onClick={onClick}
         className={`
-          w-64 h-64 md:w-80 md:h-80 rounded-full cursor-pointer relative
-          transition-all duration-700 ease-out preserve-3d
-          ${isTalking ? 'scale-105 shadow-[0_0_50px_rgba(59,130,246,0.6)]' : 'hover:scale-102'}
+          w-72 h-72 md:w-96 md:h-96 rounded-full cursor-pointer relative
+          transition-all duration-1000 ease-out preserve-3d
+          ${isTalking ? 'scale-105 rotate-y-12' : 'hover:scale-102'}
           ${isNodding ? 'nod-animation' : ''}
           ${isShaking ? 'shake-animation' : ''}
         `}
       >
-        {/* Ambient Glows */}
-        <div className={`absolute inset-0 rounded-full bg-blue-500/20 blur-3xl animate-pulse ${isTalking ? 'opacity-100' : 'opacity-0'}`}></div>
+        {/* Advanced Multi-layered Glow */}
+        <div className={`absolute inset-0 rounded-full bg-blue-500/10 blur-[100px] transition-all duration-1000 ${isTalking ? 'opacity-100 scale-125' : 'opacity-40'}`}></div>
+        <div className={`absolute inset-0 rounded-full bg-cyan-400/5 blur-[60px] transition-all duration-1000 ${isListening ? 'opacity-100 scale-110' : 'opacity-0'}`}></div>
         
-        {/* The Avatar Image */}
-        <div className="absolute inset-0 rounded-full bg-gradient-to-b from-blue-400/20 to-purple-600/20 backdrop-blur-sm border-2 border-white/20 overflow-hidden shadow-2xl">
+        {/* Core Avatar Container */}
+        <div className={`
+          absolute inset-0 rounded-full overflow-hidden shadow-[0_0_80px_rgba(0,0,0,0.5)]
+          border-4 transition-colors duration-1000
+          ${isTalking ? 'border-blue-400/50' : 'border-white/10'}
+          ${isListening ? 'border-red-400/50' : ''}
+        `}>
+          <div className="absolute inset-0 bg-gradient-to-b from-blue-400/10 to-transparent z-10"></div>
           <img 
             src={dropletAvatar} 
-            alt="Delta Avatar" 
-            className={`w-full h-full object-cover transition-all duration-500 ${isTalking ? 'brightness-110 saturate-110' : 'brightness-90 opacity-80'}`} 
+            alt="Delta Intelligence" 
+            className={`w-full h-full object-cover transition-all duration-1000 
+              ${isTalking ? 'brightness-125 scale-110 saturate-125' : 'brightness-90 grayscale-[0.2]'}
+              ${isListening ? 'sepia-[0.2] brightness-110' : ''}
+            `} 
           />
         </div>
 
-        {/* Status Indicators */}
-        <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2">
-          {isListening && <div className="px-4 py-1.5 bg-red-500/80 backdrop-blur-md rounded-full text-xs font-bold animate-pulse shadow-lg">LISTENING</div>}
-          {isProcessing && <div className="px-4 py-1.5 bg-blue-500/80 backdrop-blur-md rounded-full text-xs font-bold animate-pulse shadow-lg">PROCESSING</div>}
-          {isLoading && <div className="px-4 py-1.5 bg-yellow-500/80 backdrop-blur-md rounded-full text-xs font-bold animate-bounce shadow-lg">LOADING</div>}
+        {/* Tactical Status Ring */}
+        <svg className="absolute -inset-8 w-[calc(100%+64px)] h-[calc(100%+64px)] pointer-events-none opacity-20">
+           <circle cx="50%" cy="50%" r="48%" fill="none" stroke="white" strokeWidth="0.5" strokeDasharray="4 8" className="animate-[spin_60s_linear_infinite]" />
+           <circle cx="50%" cy="50%" r="46%" fill="none" stroke="white" strokeWidth="1" strokeDasharray="100 200" className="animate-[spin_40s_linear_infinite_reverse]" />
+        </svg>
+
+        {/* HUD Elements */}
+        <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3">
+          <div className="flex gap-2">
+            {isListening && <div className="px-4 py-1.5 bg-red-500 text-[10px] font-black tracking-[0.2em] rounded-md shadow-[0_0_20px_rgba(239,68,68,0.4)] animate-pulse">LISTENING</div>}
+            {isProcessing && <div className="px-4 py-1.5 bg-blue-500 text-[10px] font-black tracking-[0.2em] rounded-md shadow-[0_0_20px_rgba(59,130,246,0.4)] animate-bounce">PROCESSING</div>}
+            {isLoading && <div className="px-4 py-1.5 bg-yellow-500 text-[10px] font-black tracking-[0.2em] rounded-md animate-pulse text-black">SYNCING</div>}
+          </div>
+          
+          <div className="px-4 py-1 bg-white/5 backdrop-blur-md border border-white/10 rounded-full">
+             <span className="text-[8px] uppercase tracking-[0.4em] font-bold text-white/40">Neural Interface v2.0</span>
+          </div>
         </div>
       </div>
     </div>

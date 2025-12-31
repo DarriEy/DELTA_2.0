@@ -34,7 +34,6 @@ class Conversation(ConversationBase):
     conversation_id: Optional[int] = None
     user_id: int
     start_time: datetime
-    end_time: Optional[datetime]
 
     class Config:
         from_attributes = True
@@ -62,7 +61,6 @@ class ModelConfigBase(BaseModel):
 
 class ConversationUpdate(BaseModel):
     summary: Optional[str] = None
-    end_time: Optional[datetime] = None
     active_mode: Optional[str] = None
 
 class ModelConfigCreate(ModelConfigBase):
@@ -86,7 +84,6 @@ class ModelRunCreate(ModelRunBase):
 class ModelRun(ModelRunBase):
     run_id: int
     start_time: datetime
-    end_time: Optional[datetime]
 
     class Config:
         from_attributes = True

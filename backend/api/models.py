@@ -68,7 +68,6 @@ class Conversation(Base):
     conversation_id = Column(Integer, unique=True, index=True)  # Should this also be auto-incrementing?
     user_id = Column(Integer, index=True)
     start_time = Column(DateTime(timezone=True), server_default=func.now())
-    end_time = Column(DateTime(timezone=True))
     summary = Column(String, nullable=True)
     active_mode = Column(String, nullable=True)
 
@@ -108,7 +107,6 @@ class ModelRun(Base):
     run_id = Column(Integer, primary_key=True, index=True)
     config_id = Column(Integer, index=True)
     start_time = Column(DateTime(timezone=True), server_default=func.now())
-    end_time = Column(DateTime(timezone=True))
     status = Column(String)
     output_data = Column(String)
 
