@@ -35,6 +35,8 @@ jobs:
           npm ci
           npm run build
           ls -R dist/
+          echo "Listing from root:"
+          ls -R frontend/dist/
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
