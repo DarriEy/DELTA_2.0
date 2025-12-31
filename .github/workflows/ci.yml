@@ -18,7 +18,7 @@ jobs:
     - name: Install system dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y libgdal-dev libproj-dev libgeos-dev gdal-bin libnetcdf-dev libpq-dev
+        sudo apt-get install -y libgdal-dev libproj-dev libgeos-dev gdal-bin libnetcdf-dev libpq-dev python3-dev libatlas-base-dev
     - name: Install dependencies
       run: |
         cd backend
@@ -28,16 +28,15 @@ jobs:
       run: |
         pip install flake8
         # stop the build if there are Python syntax errors or undefined names
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 backend/ --count --select=E9,F63,F7,F82 --show-source --statistics
     - name: Run health check test
       env:
         PYTHONPATH: ${{ github.workspace }}/backend
       run: |
         echo "Running backend health tests..."
-        cd backend
-        ls -R api/ modules/
+        # Test imports from the root of the backend
         python -c "import modules.modeling; print('Modules modeling imported')"
-        python -c "import api.main; print('App imported successfully')"
+        python -c "from api.main import app; print('App imported successfully')"
 
   frontend-build:
     runs-on: ubuntu-latest
