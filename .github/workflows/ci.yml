@@ -18,7 +18,7 @@ jobs:
     - name: Install system dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y libgdal-dev libproj-dev libgeos-dev gdal-bin libnetcdf-dev
+        sudo apt-get install -y libgdal-dev libproj-dev libgeos-dev gdal-bin libnetcdf-dev libpq-dev
     - name: Install dependencies
       run: |
         cd backend
@@ -30,11 +30,14 @@ jobs:
         # stop the build if there are Python syntax errors or undefined names
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
     - name: Run health check test
+      env:
+        PYTHONPATH: ${{ github.workspace }}/backend
       run: |
         echo "Running backend health tests..."
         cd backend
-        PYTHONPATH=. python -c "import modules.modeling; print('Modules modeling imported')"
-        PYTHONPATH=. python -c "from api.main import app; print('App imported successfully')"
+        ls -R api/ modules/
+        python -c "import modules.modeling; print('Modules modeling imported')"
+        python -c "import api.main; print('App imported successfully')"
 
   frontend-build:
     runs-on: ubuntu-latest
