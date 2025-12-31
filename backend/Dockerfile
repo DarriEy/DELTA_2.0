@@ -1,11 +1,12 @@
 # Use the official Python image as the base image
-FROM python:3.9-slim
+FROM python:3.12-slim
 
 # Install system dependencies for scientific libraries
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libgdal-dev \
     libproj-dev \
+    libgeos-dev \
     gdal-bin \
     netcdf-bin \
     libnetcdf-dev \
