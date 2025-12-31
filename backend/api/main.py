@@ -135,17 +135,23 @@ async def startup_event():
             
             # Create initial user
             create_initial_user()
-        except Exception as e:
-            print(f"CRITICAL ERROR: Failed to connect to database: {e}")
-    else:
-        print("Skipping database initialization (no SessionLocal)")
+            except Exception as e:
+                print(f"CRITICAL ERROR: Failed to connect to database: {e}")
+            else:
+                print("Skipping database initialization (no SessionLocal)")
+        
+        
+        # Include the modular routers with /api prefix
+        
+app.include_router(chat.router, prefix="/api", tags=["chat"])
+app.include_router(jobs.router, prefix="/api", tags=["jobs"])
+app.include_router(users.router, prefix="/api", tags=["users"])
 
-@app.get("/health/google")
+@app.get("/api/health/google")
 async def google_health_check():
     """Checks the status of Google service integration."""
     from utils.config import config
     project_id = config.get("PROJECT_ID")
-    google_api_key = config.get("GOOGLE_API_KEY")
     
     results = {
         "generative_ai": "unknown",
@@ -156,7 +162,6 @@ async def google_health_check():
     
     try:
         from api.llm_integration import generate_response
-        # Quick test of the API
         response = await generate_response("health check")
         if "Error" not in response:
             results["generative_ai"] = "ok"
@@ -167,11 +172,16 @@ async def google_health_check():
 
     return results
 
-
-# Include the modular routers with /api prefix
-app.include_router(chat.router, prefix="/api", tags=["chat"])
-app.include_router(jobs.router, prefix="/api", tags=["jobs"])
-app.include_router(users.router, prefix="/api", tags=["users"])
+@app.get("/api/debug/config")
+async def debug_config():
+    from utils.config import config
+    return {
+        "PROJECT_ID": config.get("PROJECT_ID"),
+        "LOCATION": config.get("LOCATION"),
+        "GOOGLE_APPLICATION_CREDENTIALS": os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"),
+        "GOOGLE_API_KEY_SET": bool(config.get("GOOGLE_API_KEY")),
+        "DATABASE_URL_SET": bool(os.environ.get("DATABASE_URL")),
+    }
 
 @app.get("/")
 async def root():

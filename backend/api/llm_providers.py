@@ -18,49 +18,67 @@ class LLMProvider(ABC):
 
 class GeminiProvider(LLMProvider):
     def __init__(self, api_key: Optional[str] = None, model_name: str = "gemini-2.0-flash"):
+        from utils.google_utils import get_credentials
         self.api_key = api_key
         self.model_name = model_name
         
         project_id = config.get("PROJECT_ID")
         location = config.get("LOCATION", "us-central1")
         
+        self.client = None
+        
         if project_id:
-            logger.info(f"Initializing Gemini via Vertex AI (Project: {project_id})")
-            # Vertex AI initialization
-            self.client = genai.Client(
-                vertexai=True,
-                project=project_id,
-                location=location
-            )
-        else:
+            try:
+                logger.info(f"Attempting to initialize Gemini via Vertex AI (Project: {project_id})")
+                creds = get_credentials()
+                self.client = genai.Client(
+                    vertexai=True,
+                    project=project_id,
+                    location=location,
+                    credentials=creds
+                )
+                logger.info("Vertex AI initialization successful")
+            except Exception as e:
+                logger.error(f"Vertex AI initialization failed, falling back to AI Studio: {e}")
+        
+        if not self.client:
             logger.info("Initializing Gemini via Google AI Studio")
             self.client = genai.Client(api_key=api_key)
 
     async def generate_response(self, prompt: str, system_prompt: str) -> str:
+        if not self.client:
+            return "Error: Gemini client not initialized. Check API keys and credentials."
         try:
-            # For Gemini 2.0, we can use the unified generate_content
-            response = self.client.models.generate_content(
+            # Use the async client (client.aio)
+            response = await self.client.aio.models.generate_content(
                 model=self.model_name,
                 contents=prompt,
                 config={
                     'system_instruction': system_prompt,
                 }
             )
+            if not response or not response.text:
+                logger.warning("Gemini returned an empty response")
+                return "I'm sorry, I couldn't generate a response. Please try again."
             return response.text
         except Exception as e:
             logger.error(f"Gemini Provider Error: {e}")
             return f"Error: {str(e)}"
 
     async def generate_response_stream(self, prompt: str, system_prompt: str):
+        if not self.client:
+            yield "Error: Gemini client not initialized."
+            return
         try:
-            for chunk in self.client.models.generate_content_stream(
+            # Use the async client (client.aio) for streaming
+            async for chunk in self.client.aio.models.generate_content_stream(
                 model=self.model_name,
                 contents=prompt,
                 config={
                     'system_instruction': system_prompt,
                 }
             ):
-                if chunk.text:
+                if chunk and chunk.text:
                     yield chunk.text
         except Exception as e:
             logger.error(f"Gemini Stream Error: {e}")
