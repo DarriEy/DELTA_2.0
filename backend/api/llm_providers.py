@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Dict, Optional
 import asyncio
+import os
 import google.genai as genai
 import logging
 from utils.config import config
@@ -31,13 +32,19 @@ class GeminiProvider(LLMProvider):
             try:
                 logger.info(f"Attempting to initialize Gemini via Vertex AI (Project: {project_id})")
                 creds = get_credentials()
-                self.client = genai.Client(
-                    vertexai=True,
-                    project=project_id,
-                    location=location,
-                    credentials=creds
-                )
-                logger.info("Vertex AI initialization successful")
+                
+                # Check if we actually got credentials and if the file path (if any) exists
+                creds_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+                if creds or (creds_path and os.path.exists(creds_path)):
+                    self.client = genai.Client(
+                        vertexai=True,
+                        project=project_id,
+                        location=location,
+                        credentials=creds
+                    )
+                    logger.info("Vertex AI initialization successful")
+                else:
+                    logger.warning("No valid credentials for Vertex AI found, will fallback to AI Studio")
             except Exception as e:
                 logger.error(f"Vertex AI initialization failed, falling back to AI Studio: {e}")
         
