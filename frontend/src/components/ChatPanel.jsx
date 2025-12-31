@@ -17,7 +17,7 @@ const ChatPanel = () => {
   }, [conversationHistory]);
 
   return (
-    <div className="flex flex-col h-[350px] relative overflow-hidden bg-white/[0.02] border border-white/[0.05] rounded-3xl">
+    <div className="flex flex-col h-[450px] relative overflow-hidden bg-white/[0.02] border border-white/[0.05] rounded-3xl shadow-2xl">
       {/* Messages */}
       <div 
         ref={scrollRef}

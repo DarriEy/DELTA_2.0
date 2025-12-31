@@ -50,6 +50,9 @@ const AnimatedAvatar = () => {
 
   useEffect(() => {
     const init = async () => {
+      const imagePrompt = 'Please, render a highly detailed photorealistic, 4K image of a natural landscape showcasing a beautiful hydrological landscape feature. The setting should be a breathtaking natural environment. Emphasize realistic lighting, textures, and reflections in the water. Style should render with sharp focus and intricate details. Use a 16:9 aspect ratio.';
+      generateBackground('general', imagePrompt);
+      
       if (!currentConversationId) {
         await createNewConversation('general');
       }
@@ -58,6 +61,7 @@ const AnimatedAvatar = () => {
   }, []);
 
   const handleSpeechRecognitionResult = async (text) => {
+// ...
     if (!text) return;
     setIsProcessing(true);
     try {
@@ -85,7 +89,7 @@ const AnimatedAvatar = () => {
     if (mode === 'educational') setCurrentEducationalContent(educationalContent.hydrology101);
     else if (mode === 'modeling') setCurrentModelingContent(modelingContent.intro);
     else if (mode === 'dataAnalysis') setCurrentDataAnalysisContent(dataAnalysisContent.intro);
-    setShowContentFrame(mode !== 'general');
+    setShowContentFrame(true);
   };
 
   const handleModelingJobSubmit = async () => {
@@ -114,8 +118,24 @@ const AnimatedAvatar = () => {
     }
   };
 
+  const getBackground = () => {
+    switch (activeMode) {
+      case 'educational': return backgrounds.educational || backgrounds.general;
+      case 'modeling': return backgrounds.modeling || backgrounds.general;
+      case 'dataAnalysis': return backgrounds.dataAnalysis || backgrounds.general;
+      default: return backgrounds.general;
+    }
+  };
+
   return (
-    <div className="min-h-screen w-screen bg-[#050505] flex flex-col items-center justify-center font-sans text-white selection:bg-blue-500/30">
+    <div 
+      className="min-h-screen w-screen flex flex-col items-center justify-center font-sans text-white selection:bg-blue-500/30 transition-all duration-1000"
+      style={{
+        background: getBackground()?.startsWith('data:') || getBackground()?.startsWith('http') 
+          ? `radial-gradient(circle at center, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.95) 100%), url(${getBackground()}) center/cover no-repeat` 
+          : getBackground() || '#050505',
+      }}
+    >
       
       {/* Minimal Header */}
       <header className="absolute top-0 left-0 right-0 z-30 px-12 py-12 flex justify-between items-center border-b border-white/[0.03]">
@@ -162,6 +182,17 @@ const AnimatedAvatar = () => {
               />
             )}
             {activeMode === 'dataAnalysis' && <DataAnalysisPanel content={currentDataAnalysisContent} />}
+            {activeMode === 'general' && (
+              <div className="h-full flex flex-col items-center justify-center text-center space-y-6 animate-in fade-in duration-1000">
+                <div className="w-16 h-16 bg-white/[0.03] border border-white/[0.05] rounded-2xl flex items-center justify-center text-3xl">🌍</div>
+                <div className="space-y-2">
+                  <h4 className="text-xl font-light uppercase tracking-[0.3em]">Command Center</h4>
+                  <p className="text-xs text-white/30 tracking-widest leading-relaxed">
+                    Select a research node from the navigation menu<br/>to begin hydrological simulations.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </main>
