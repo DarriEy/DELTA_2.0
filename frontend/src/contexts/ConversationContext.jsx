@@ -8,9 +8,11 @@ export const ConversationProvider = ({ children }) => {
   const [conversationHistory, setConversationHistory] = useState([]);
   const [activeMode, setActiveMode] = useState('general');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const createNewConversation = useCallback(async (mode, userId = 1) => {
     setIsLoading(true);
+    setError(null);
     try {
       const data = await apiClient.post('/conversations/', { active_mode: mode, user_id: userId });
       setCurrentConversationId(data.conversation_id);
@@ -19,6 +21,7 @@ export const ConversationProvider = ({ children }) => {
       return data.conversation_id;
     } catch (error) {
       console.error('Failed to create conversation:', error);
+      setError('Connection failed. Please check your network.');
       return null;
     } finally {
       setIsLoading(false);
