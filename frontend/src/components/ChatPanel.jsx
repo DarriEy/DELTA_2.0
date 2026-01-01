@@ -60,5 +60,3 @@ const ChatPanel = () => {
 };
 
 export default ChatPanel;
-
-export default ChatPanel;
