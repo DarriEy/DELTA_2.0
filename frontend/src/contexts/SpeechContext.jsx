@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useRef, useCallback, useEffect } from 'react';
-import { generateSpeechFromText } from '../services';
+import { generateSpeechFromText } from '../api/media';
 
 const SpeechContext = createContext();
 

@@ -51,6 +51,17 @@ class JobService:
             db.refresh(job)
         return job
 
+    def cleanup_stalled_jobs(self, db: Session) -> int:
+        """Marks RUNNING or PENDING jobs as STALLED on startup."""
+        stalled_jobs = db.query(DBJob).filter(DBJob.status.in_(["RUNNING", "PENDING"])).all()
+        for job in stalled_jobs:
+            job.status = "STALLED"
+            job.logs = (job.logs or "") + "\nJob marked as STALLED due to server restart.\n"
+        
+        if stalled_jobs:
+            db.commit()
+        return len(stalled_jobs)
+
 _SERVICE: Optional[JobService] = None
 
 def get_job_service() -> JobService:

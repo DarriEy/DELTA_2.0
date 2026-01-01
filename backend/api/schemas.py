@@ -26,6 +26,13 @@ class User(UserBase):
 class UserInput(BaseModel):
     user_input: str
 
+class ChatRequest(BaseModel):
+    user_input: str
+    conversation_id: int
+
+class LearnRequest(BaseModel):
+    user_input: str
+
 class ConversationBase(BaseModel):
     active_mode: str
     user_id: Optional[int] = None

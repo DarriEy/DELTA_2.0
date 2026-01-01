@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { generateImageFromPrompt } from '../services';
+import { generateImageFromPrompt } from '../api/media';
 
 export const useBackgrounds = () => {
   const [backgrounds, setBackgrounds] = useState({

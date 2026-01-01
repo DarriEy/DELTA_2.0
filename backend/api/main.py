@@ -6,7 +6,7 @@ import logging
 from contextlib import asynccontextmanager
 
 from .models import Base
-from .routers import chat, jobs, users
+from .routers import chat, jobs, users, health, system
 from utils.db import get_engine, get_session_local
 from utils.config import get_settings
 from utils.settings import load_environment
@@ -24,8 +24,8 @@ def create_app() -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         log.info("DELTA Backend Starting...")
-        from .llm_integration import init_vertex
-        init_vertex()
+        from .services.llm_service import get_llm_service
+        get_llm_service().init_vertex()
 
         creds_path = "/app/google-credentials.json"
         if os.path.exists(creds_path):
@@ -45,6 +45,16 @@ def create_app() -> FastAPI:
                 Base.metadata.create_all(bind=engine)
                 log.info("Tables created successfully.")
                 create_initial_user(session_local)
+                
+                # Cleanup stalled jobs
+                from .services.job_service import get_job_service
+                db = session_local()
+                try:
+                    count = get_job_service().cleanup_stalled_jobs(db)
+                    if count > 0:
+                        log.info(f"Cleaned up {count} stalled jobs.")
+                finally:
+                    db.close()
             except Exception as e:
                 log.error("Failed to connect to database: %s", e)
         else:
@@ -99,33 +109,13 @@ def create_app() -> FastAPI:
             pass
         finally:
             db.close()
+
+    # Include Routers
+    app.include_router(system.router, tags=["system"])
     app.include_router(chat.router, prefix="/api", tags=["chat"])
     app.include_router(jobs.router, prefix="/api", tags=["jobs"])
     app.include_router(users.router, prefix="/api", tags=["users"])
-    
-    # Add health check router
-    from .routers.health import router as health_router
-    app.include_router(health_router, prefix="/api", tags=["health"])
-
-    @app.get("/api/health/google")
-    async def google_health_check():
-        """Checks the status of Google service integration."""
-        from .services.health_service import get_health_service
-        return await get_health_service().check_google_health()
-
-    @app.get("/api/debug/config")
-    async def debug_config():
-        return {
-            "PROJECT_ID": settings.project_id,
-            "LOCATION": settings.location,
-            "GOOGLE_APPLICATION_CREDENTIALS": os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"),
-            "GOOGLE_API_KEY_SET": bool(settings.google_api_key),
-            "DATABASE_URL_SET": bool(os.environ.get("DATABASE_URL")),
-        }
-
-    @app.get("/")
-    async def root():
-        return {"message": "DELTA Backend Started"}
+    app.include_router(health.router, prefix="/api", tags=["health"])
 
     return app
 

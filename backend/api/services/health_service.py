@@ -2,11 +2,14 @@ import os
 import logging
 from typing import Optional, Dict, Any
 from utils.config import get_settings
-from api.llm_integration import generate_response
 
 log = logging.getLogger(__name__)
 
 class HealthService:
+    def __init__(self, llm_service=None):
+        from .llm_service import get_llm_service
+        self.llm_service = llm_service or get_llm_service()
+
     async def check_google_health(self) -> Dict[str, Any]:
         """Checks the status of Google service integration."""
         project_id = get_settings().project_id
@@ -19,7 +22,7 @@ class HealthService:
         }
         
         try:
-            response = await generate_response("health check")
+            response = await self.llm_service.generate_response("health check")
             if "Error" not in response:
                 results["generative_ai"] = "ok"
             else:

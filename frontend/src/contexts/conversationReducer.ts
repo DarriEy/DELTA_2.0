@@ -1,13 +1,25 @@
-const findLastAssistantIndex = (messages) => {
+export interface Message {
+  role: 'user' | 'assistant' | 'model';
+  content: string;
+}
+
+export type ConversationAction =
+  | { type: 'reset' }
+  | { type: 'replace'; history: Message[] }
+  | { type: 'add'; message: Message }
+  | { type: 'start_assistant_message' }
+  | { type: 'update_last_assistant'; content: string };
+
+const findLastAssistantIndex = (messages: Message[]): number => {
   for (let i = messages.length - 1; i >= 0; i -= 1) {
-    if (messages[i].role === "assistant") {
+    if (messages[i].role === "assistant" || messages[i].role === "model") {
       return i;
     }
   }
   return -1;
 };
 
-export const conversationReducer = (state, action) => {
+export const conversationReducer = (state: Message[], action: ConversationAction): Message[] => {
   switch (action.type) {
     case "reset":
       return [];

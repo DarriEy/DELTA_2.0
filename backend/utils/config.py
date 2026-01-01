@@ -24,6 +24,10 @@ class Settings:
 
     allowed_origins: List[str]
 
+    jwt_secret_key: str
+    jwt_algorithm: str
+    access_token_expire_minutes: int
+
     @classmethod
     def from_env(cls) -> "Settings":
         return cls(
@@ -56,6 +60,9 @@ class Settings:
                     ]
                 ),
             ).split(","),
+            jwt_secret_key=get_env("JWT_SECRET_KEY", "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"),
+            jwt_algorithm=get_env("JWT_ALGORITHM", "HS256"),
+            access_token_expire_minutes=int(get_env("ACCESS_TOKEN_EXPIRE_MINUTES", "1440")), # 1 day
         )
 
 

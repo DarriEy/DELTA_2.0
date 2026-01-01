@@ -2,8 +2,19 @@ import { getApiBaseUrl } from "../config/api";
 
 const API_BASE_URL = getApiBaseUrl();
 
+interface ApiErrorData {
+  message?: string;
+  detail?: string;
+  error_code?: string;
+  [key: string]: any;
+}
+
 class ApiError extends Error {
-  constructor(status, data) {
+  status: number;
+  data: ApiErrorData;
+  errorCode?: string;
+
+  constructor(status: number, data: ApiErrorData) {
     const message = data?.message || data?.detail || `API Error ${status}`;
     super(message);
     this.status = status;
@@ -13,11 +24,11 @@ class ApiError extends Error {
   }
 }
 
-const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-const handleResponse = async (response) => {
+const handleResponse = async (response: Response) => {
   if (!response.ok) {
-    let errorData;
+    let errorData: ApiErrorData;
     try {
       errorData = await response.json();
     } catch (e) {
@@ -32,9 +43,18 @@ const handleResponse = async (response) => {
   return json.data !== undefined ? json.data : json;
 };
 
-const fetchWithRetry = async (url, options, retries = 2, backoff = 500) => {
+const fetchWithRetry = async (url: string, options?: RequestInit, retries = 2, backoff = 500): Promise<Response> => {
+  const token = localStorage.getItem('token');
+  const authOptions = { ...options };
+  if (token) {
+    authOptions.headers = {
+      ...authOptions.headers,
+      'Authorization': `Bearer ${token}`
+    };
+  }
+
   try {
-    const response = await fetch(url, options);
+    const response = await fetch(url, authOptions);
     if (!response.ok && (response.status === 429 || response.status >= 500) && retries > 0) {
       console.warn(`Retrying request to ${url}. Status: ${response.status}. Retries left: ${retries}`);
       await sleep(backoff);
@@ -52,7 +72,7 @@ const fetchWithRetry = async (url, options, retries = 2, backoff = 500) => {
 };
 
 export const apiClient = {
-  async post(endpoint, data) {
+  async post<T = any>(endpoint: string, data: any): Promise<T> {
     const response = await fetchWithRetry(`${API_BASE_URL}${endpoint}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -61,12 +81,12 @@ export const apiClient = {
     return handleResponse(response);
   },
 
-  async get(endpoint) {
+  async get<T = any>(endpoint: string): Promise<T> {
     const response = await fetchWithRetry(`${API_BASE_URL}${endpoint}`);
     return handleResponse(response);
   },
 
-  async patch(endpoint, data) {
+  async patch<T = any>(endpoint: string, data: any): Promise<T> {
     const response = await fetchWithRetry(`${API_BASE_URL}${endpoint}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -75,7 +95,7 @@ export const apiClient = {
     return handleResponse(response);
   },
 
-  async put(endpoint, data) {
+  async put<T = any>(endpoint: string, data: any): Promise<T> {
     const response = await fetchWithRetry(`${API_BASE_URL}${endpoint}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -84,9 +104,7 @@ export const apiClient = {
     return handleResponse(response);
   },
 
-  async stream(endpoint, data, onChunk) {
-    // Retrying streams is more complex as we shouldn't retry after we started receiving data.
-    // For simplicity, we only retry the initial connection.
+  async stream(endpoint: string, data: any, onChunk?: (chunk: string) => void): Promise<string> {
     const response = await fetchWithRetry(`${API_BASE_URL}${endpoint}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -94,13 +112,17 @@ export const apiClient = {
     });
 
     if (!response.ok) {
-      let errorData;
+      let errorData: ApiErrorData;
       try {
         errorData = await response.json();
       } catch (e) {
         errorData = { message: `Stream Error ${response.status}` };
       }
       throw new ApiError(response.status, errorData);
+    }
+
+    if (!response.body) {
+      throw new Error('Response body is null');
     }
 
     const reader = response.body.getReader();

@@ -9,8 +9,12 @@ from .llm_service import get_llm_service
 
 
 class MediaService:
+    def __init__(self, llm_service=None):
+        from .llm_service import get_llm_service
+        self.llm_service = llm_service or get_llm_service()
+
     async def generate_image_data_uri(self, prompt: str) -> str:
-        data_uri = await get_llm_service().generate_image(prompt)
+        data_uri = await self.llm_service.generate_image(prompt)
         if not data_uri:
             raise HTTPException(status_code=500, detail="Image generation failed")
         return data_uri

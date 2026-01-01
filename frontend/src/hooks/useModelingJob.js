@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { apiClient } from "../api/client";
+import { submitModelingJob } from "../api/modeling";
 
 export const useModelingJob = ({ setIsProcessing, onShake }) => {
   const [jobStatus, setJobStatus] = useState(null);
@@ -8,11 +8,9 @@ export const useModelingJob = ({ setIsProcessing, onShake }) => {
     async (selectedModel) => {
       try {
         setIsProcessing(true);
-        await apiClient.post("/run_modeling", {
-          model: selectedModel,
-          job_type: "SIMULATION",
-        });
+        const response = await submitModelingJob(selectedModel);
         setJobStatus("PENDING");
+        return response;
       } catch (error) {
         console.error("Modeling Error:", error);
         onShake();

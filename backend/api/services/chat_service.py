@@ -14,6 +14,10 @@ from .tool_runner import run_tools
 log = logging.getLogger(__name__)
 
 class ChatService:
+    def __init__(self, llm_service=None):
+        from .llm_service import get_llm_service
+        self.llm_service = llm_service or get_llm_service()
+
     def parse_llm_response(self, llm_response: Union[str, Dict[str, Any]]) -> Tuple[str, List[Dict[str, Any]]]:
         if isinstance(llm_response, dict) and "function_calls" in llm_response:
             return llm_response.get("text", ""), llm_response.get("function_calls", [])
@@ -81,8 +85,7 @@ class ChatService:
             return None, error
 
         # Generate LLM response (first turn)
-        llm_service = get_llm_service()
-        llm_response = await llm_service.generate_response(user_input, history=history)
+        llm_response = await self.llm_service.generate_response(user_input, history=history)
         text_part, function_calls = self.parse_llm_response(llm_response)
 
         final_text_response: str = text_part
@@ -97,7 +100,7 @@ class ChatService:
                 [f"Tool '{item['name']}' Output: {item['result']}" for item in tool_results]
             )
 
-            final_response = await llm_service.generate_response(
+            final_response = await self.llm_service.generate_response(
                 tool_feedback,
                 history=current_history,
             )
@@ -142,8 +145,7 @@ class ChatService:
             return
 
         full_response = ""
-        llm_service = get_llm_service()
-        async for chunk in llm_service.generate_stream(user_input, history=history):
+        async for chunk in self.llm_service.generate_stream(user_input, history=history):
             full_response += chunk
             yield f"data: {chunk}\n\n"
 
@@ -170,7 +172,7 @@ class ChatService:
             {"sender": msg.sender, "content": msg.content} for msg in messages
         ]
 
-        return await get_llm_service().generate_summary_from_messages(formatted_messages)
+        return await self.llm_service.generate_summary_from_messages(formatted_messages)
 
 _SERVICE: Optional[ChatService] = None
 

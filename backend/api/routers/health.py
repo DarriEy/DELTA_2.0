@@ -1,10 +1,11 @@
 """Health check endpoint for monitoring service status."""
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from typing import Dict, Any
 import logging
 
 from ..client_factory import APIClientFactory
+from ..services.health_service import get_health_service
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -32,3 +33,8 @@ async def health_check() -> Dict[str, Any]:
             "error": str(e),
             "timestamp": "2026-01-01T12:34:26.275-07:00"
         }
+
+@router.get("/health/google")
+async def google_health_check():
+    """Checks the status of Google service integration."""
+    return await get_health_service().check_google_health()
