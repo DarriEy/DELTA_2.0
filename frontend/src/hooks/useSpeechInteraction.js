@@ -36,14 +36,6 @@ export const useSpeechInteraction = ({
 
   const isBusy = speechQueue.length > 0 || isSpeakingChunk;
 
-  useEffect(() => {
-    if (!isBusy && shouldRestartListening.current && !isListeningRef.current) {
-      console.log("DELTA: Speech queue empty, starting to listen again...");
-      startListening(handleSpeechRecognitionResult);
-      shouldRestartListening.current = false;
-    }
-  }, [isBusy, startListening, handleSpeechRecognitionResult]);
-
   const handleSpeechRecognitionResult = useCallback(
     async (text) => {
       if (!text) return;
@@ -66,6 +58,14 @@ export const useSpeechInteraction = ({
     },
     [sendMessage, processTextChunk, triggerShake, flushBuffer, clearQueue]
   );
+
+  useEffect(() => {
+    if (!isBusy && shouldRestartListening.current && !isListeningRef.current) {
+      console.log("DELTA: Speech queue empty, starting to listen again...");
+      startListening(handleSpeechRecognitionResult);
+      shouldRestartListening.current = false;
+    }
+  }, [isBusy, startListening, handleSpeechRecognitionResult]);
 
   const handleAvatarClick = useCallback(async () => {
     console.log("DELTA: Avatar clicked. State:", {
