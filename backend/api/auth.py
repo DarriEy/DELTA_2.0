@@ -31,7 +31,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     encoded_jwt = jwt.encode(to_encode, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
     return encoded_jwt
 
-async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> DBUser:
+async def get_current_user(token: str = Depends(oauth2_scheme), db: Optional[Session] = Depends(get_db)) -> DBUser:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -45,6 +45,11 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
     except JWTError:
         raise credentials_exception
         
+    if db is None:
+        # Return a mock user if DB is down so the app remains functional
+        logger.warning("DB is down, returning stateless mock user for %s", username)
+        return DBUser(id=101, username=username, email=f"{username}@stateless.delta.ai")
+
     user = db.query(DBUser).filter(DBUser.username == username).first()
     if user is None:
         raise credentials_exception

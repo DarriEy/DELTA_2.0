@@ -23,7 +23,10 @@ class ChatService:
             return llm_response.get("text", ""), llm_response.get("function_calls", [])
         return str(llm_response), []
 
-    def create_message(self, db: Session, content: str, sender: str, conversation_id: int, message_index: int) -> DBMessage:
+    def create_message(self, db: Optional[Session], content: str, sender: str, conversation_id: int, message_index: int) -> Optional[DBMessage]:
+        if not db:
+            return None
+            
         db_message = DBMessage(
             content=str(content),
             sender=sender,
@@ -33,8 +36,11 @@ class ChatService:
         db.add(db_message)
         return db_message
 
-    def get_recent_history(self, db: Session, conversation_id: int, limit: int = 20) -> List[Dict[str, Any]]:
+    def get_recent_history(self, db: Optional[Session], conversation_id: int, limit: int = 20) -> List[Dict[str, Any]]:
         """Retrieves recent messages for context."""
+        if not db:
+            return []
+            
         messages = (
             db.query(DBMessage)
             .filter(DBMessage.conversation_id == conversation_id)
@@ -51,8 +57,12 @@ class ChatService:
         ]
 
     async def _prepare_conversation_turn(
-        self, db: Session, user_input: str, conversation_id: int
+        self, db: Optional[Session], user_input: str, conversation_id: int
     ) -> Tuple[Optional[DBConversation], Optional[List[Dict[str, Any]]], int, Optional[str]]:
+        if not db:
+            # Degraded mode: no history, index 0
+            return None, [], 0, None
+
         conversation = db.query(DBConversation).filter(
             DBConversation.id == conversation_id
         ).first()

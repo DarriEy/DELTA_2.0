@@ -21,14 +21,15 @@ router = APIRouter()
 async def process_input(
     background_tasks: BackgroundTasks,
     request: ChatRequest,
-    db: Session = Depends(get_db),
+    db: Optional[Session] = Depends(get_db),
     chat_service: ChatService = Depends(get_chat_service),
     current_user: DBUser = Depends(get_current_user)
 ):
     # Verify conversation ownership
-    conv = get_user_service().get_conversation(db, request.conversation_id)
-    if not conv or conv.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Not authorized for this conversation")
+    if db:
+        conv = get_user_service().get_conversation(db, request.conversation_id)
+        if not conv or conv.user_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Not authorized for this conversation")
 
     llm_response, error = await chat_service.process_user_input(
         db, request.user_input, request.conversation_id, background_tasks
@@ -40,14 +41,15 @@ async def process_input(
 @router.post("/process_stream")
 async def process_input_stream(
     request: ChatRequest,
-    db: Session = Depends(get_db),
+    db: Optional[Session] = Depends(get_db),
     chat_service: ChatService = Depends(get_chat_service),
     current_user: DBUser = Depends(get_current_user)
 ):
     # Verify conversation ownership
-    conv = get_user_service().get_conversation(db, request.conversation_id)
-    if not conv or conv.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Not authorized for this conversation")
+    if db:
+        conv = get_user_service().get_conversation(db, request.conversation_id)
+        if not conv or conv.user_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Not authorized for this conversation")
 
     return StreamingResponse(
         chat_service.process_user_input_stream(db, request.user_input, request.conversation_id),

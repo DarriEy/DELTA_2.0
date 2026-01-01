@@ -60,10 +60,16 @@ def create_user(
 @router.post("/conversations/", response_model=APIResponse[Conversation])
 def create_conversation(
     conversation: ConversationCreate, 
-    db: Session = Depends(get_db),
+    db: Optional[Session] = Depends(get_db),
     user_service: UserService = Depends(get_user_service),
     current_user: DBUser = Depends(get_current_user)
 ):
+    if db is None:
+        # Return a mock conversation for degraded mode
+        import datetime
+        mock_conv = DBConversation(id=999, user_id=current_user.id, start_time=datetime.datetime.now(), active_mode=conversation.active_mode)
+        return APIResponse(data=mock_conv)
+
     try:
         conv_dict = conversation.dict()
         conv_dict["user_id"] = current_user.id

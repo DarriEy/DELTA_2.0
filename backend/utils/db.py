@@ -65,11 +65,12 @@ def get_session_local() -> Optional[sessionmaker]:
     return _SessionLocal
 
 
-def get_db() -> Generator[Session, None, None]:
+def get_db() -> Generator[Optional[Session], None, None]:
     session_factory = get_session_local()
     if not session_factory:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=503, detail="Database connection unavailable")
+        logger.warning("Database session factory not available. Yielding None for DB session.")
+        yield None
+        return
         
     db = session_factory()
     try:
