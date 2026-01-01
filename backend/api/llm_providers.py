@@ -102,7 +102,7 @@ class GeminiProvider(LLMProvider):
             return "Error: Gemini client not initialized. Check API keys and credentials."
         
         attempt = 0
-        max_attempts = 8
+        max_attempts = 5
         base_delay = 2
         
         while attempt < max_attempts:
@@ -128,8 +128,7 @@ class GeminiProvider(LLMProvider):
                 )
                 
                 if not response:
-                    logger.warning("Gemini returned an empty response")
-                    return "I'm sorry, I couldn't generate a response. Please try again."
+                    return "I'm sorry, I couldn't generate a response."
 
                 # Check for function calls
                 function_calls = []
@@ -155,14 +154,12 @@ class GeminiProvider(LLMProvider):
                 attempt += 1
                 err_msg = str(e)
                 
-                # Handle 404 (Model not found)
-                if "404" in err_msg and self.model_name != "gemini-2.0-flash":
-                    logger.warning(f"Model {self.model_name} not found, falling back to gemini-2.0-flash")
-                    self.model_name = "gemini-2.0-flash"
-                    attempt = 0 # Reset attempts for new model
+                if "404" in err_msg and self.model_name != "gemini-1.5-flash-latest":
+                    logger.warning(f"Model {self.model_name} not found, falling back to 1.5-flash")
+                    self.model_name = "gemini-1.5-flash-latest"
+                    attempt = 0
                     continue
 
-                # Handle 429 (Resource exhausted)
                 if ("429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg) and attempt < max_attempts:
                     import re
                     delay = base_delay * (2 ** (attempt - 1))
@@ -172,13 +169,13 @@ class GeminiProvider(LLMProvider):
                             delay = max(delay, float(match.group(1)) + 1.0)
                         except ValueError: pass
                     
-                    logger.warning(f"Gemini API rate limited (429). Retrying in {delay:.2f}s...")
+                    logger.warning(f"Gemini API rate limited. Retrying in {delay:.2f}s...")
                     await asyncio.sleep(delay)
                 else:
-                    logger.error(f"Gemini Provider Final Error: {err_msg}")
+                    logger.error(f"Gemini Error: {err_msg}")
                     return f"Error: {err_msg}"
         
-        return "Error: Maximum retry attempts reached."
+        return "Error: Quota exceeded after retries."
 
     async def generate_response_stream(self, prompt: str, system_prompt: str):
         async for chunk in self.generate_response_stream_with_history(prompt, system_prompt, []):
@@ -190,7 +187,7 @@ class GeminiProvider(LLMProvider):
             return
 
         attempt = 0
-        max_attempts = 8
+        max_attempts = 5
         base_delay = 2
         
         while attempt < max_attempts:
@@ -201,15 +198,20 @@ class GeminiProvider(LLMProvider):
                 
                 contents.append(types.Content(role="user", parts=[types.Part.from_text(text=prompt)]))
 
-                stream = self.client.aio.models.generate_content_stream(
+                stream_call = self.client.aio.models.generate_content_stream(
                     model=self.model_name,
                     contents=contents,
                     config={
                         'system_instruction': system_prompt,
                     }
                 )
-                if inspect.isawaitable(stream):
-                    stream = await stream
+                
+                # For some reason, sometimes we need to await the stream object itself
+                if inspect.isawaitable(stream_call):
+                    stream = await stream_call
+                else:
+                    stream = stream_call
+
                 async for chunk in stream:
                     if chunk and chunk.text:
                         yield chunk.text
@@ -219,14 +221,12 @@ class GeminiProvider(LLMProvider):
                 attempt += 1
                 err_msg = str(e)
                 
-                # Handle 404
-                if "404" in err_msg and self.model_name != "gemini-2.0-flash":
-                    logger.warning(f"Model {self.model_name} not found, falling back to gemini-2.0-flash")
-                    self.model_name = "gemini-2.0-flash"
+                if "404" in err_msg and self.model_name != "gemini-1.5-flash-latest":
+                    logger.warning(f"Model {self.model_name} not found, falling back to 1.5-flash")
+                    self.model_name = "gemini-1.5-flash-latest"
                     attempt = 0
                     continue
 
-                # Handle 429
                 if ("429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg) and attempt < max_attempts:
                     import re
                     delay = base_delay * (2 ** (attempt - 1))
@@ -236,10 +236,10 @@ class GeminiProvider(LLMProvider):
                             delay = max(delay, float(match.group(1)) + 1.0)
                         except ValueError: pass
                     
-                    logger.warning(f"Gemini Stream rate limited (429). Retrying in {delay:.2f}s...")
+                    logger.warning(f"Gemini Stream rate limited. Retrying in {delay:.2f}s...")
                     await asyncio.sleep(delay)
                 else:
-                    logger.error(f"Gemini Stream Final Error: {err_msg}")
+                    logger.error(f"Gemini Stream Error: {err_msg}")
                     yield f"Error: {err_msg}"
                     return
 

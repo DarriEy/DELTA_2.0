@@ -24,6 +24,9 @@ class MediaService:
             raise HTTPException(status_code=400, detail="No text provided")
 
         tts_client = get_tts_client()
+        if not tts_client:
+            raise HTTPException(status_code=503, detail="Speech engine unavailable (credentials missing)")
+            
         synthesis_input = texttospeech.SynthesisInput(text=text)
         voice = texttospeech.VoiceSelectionParams(
             language_code="en-US", name="en-US-Polyglot-1"

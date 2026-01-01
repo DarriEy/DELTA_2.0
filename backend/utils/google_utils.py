@@ -101,10 +101,14 @@ def get_credentials():
         return None
 
 def get_tts_client():
-    creds = get_credentials()
-    if creds:
-        return texttospeech.TextToSpeechClient(credentials=creds)
-    return texttospeech.TextToSpeechClient()
+    try:
+        creds = get_credentials()
+        if creds:
+            return texttospeech.TextToSpeechClient(credentials=creds)
+        return texttospeech.TextToSpeechClient()
+    except Exception as e:
+        logger.error(f"Failed to initialize TTS client: {e}")
+        return None
 
 def get_storage_client():
     creds = get_credentials()
