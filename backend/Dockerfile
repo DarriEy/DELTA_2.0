@@ -22,9 +22,9 @@ FROM python:3.12-slim
 
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libgdal32 \
+    libgdal36 \
     libproj25 \
-    libgeos-c1v5 \
+    libgeos-c1t64 \
     netcdf-bin \
     && rm -rf /var/lib/apt/lists/*
 
