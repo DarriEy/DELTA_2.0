@@ -5,6 +5,7 @@ SQLAlchemy
 alembic
 bcrypt
 python-jose[cryptography]
+passlib[recommended]
 python-dotenv
 httpx
 psycopg2-binary
