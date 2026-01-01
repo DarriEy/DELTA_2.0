@@ -1,182 +1,45 @@
 # backend/api/llm_integration.py
-import base64
-import os
-import asyncio
-import logging
-import traceback
-from io import BytesIO
-from functools import partial
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional, Union
 
-import PIL.Image
-import httpx
-import google.auth
-import google.auth.transport.requests
-import google.genai as genai
-import vertexai
-from vertexai.generative_models import GenerativeModel, Part, SafetySetting, HarmCategory, HarmBlockThreshold
-# from anthropic import Anthropic, AnthropicError  # Using Gemini instead
-from dotenv import load_dotenv
+from .services.llm_service import get_llm_service
 
-from utils.config import config
-from utils.prompts import (
-    DELTA_SYSTEM_PROMPT,
-    EDUCATIONAL_GUIDE_PROMPT,
-)
-from utils.google_utils import get_credentials
-from modules.educational import get_educational_content
+vertex_ready = False
 
-load_dotenv()
 
-# Also load from secure home directory env file
-home_env_path = os.path.expanduser("~/.env_delta")
-if os.path.exists(home_env_path):
-    load_dotenv(home_env_path)
-
-# Setup logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-# Constants
-PROJECT_ID = config.get("PROJECT_ID")
-LOCATION = config.get("LOCATION", "us-central1")
-
-# Initialize Clients - Use Gemini instead of Anthropic
-# anthropic_client = Anthropic(api_key=config.get("ANTHROPIC_API_KEY"))
-
-def init_vertex():
+def init_vertex() -> bool:
     """Initializes Vertex AI with the provided credentials."""
-    try:
-        creds = get_credentials()
-        if creds:
-            vertexai.init(project=PROJECT_ID, location=LOCATION, credentials=creds)
-            logger.info(f"Vertex AI initialized with project {PROJECT_ID}")
-            return True
-        else:
-            logger.warning("No Google credentials found for Vertex AI.")
-            return False
-    except Exception as e:
-        logger.error(f"Vertex AI init failed: {e}")
-        return False
+    global vertex_ready
+    service = get_llm_service()
+    vertex_ready = service.init_vertex()
+    return vertex_ready
 
-# Trigger initialization
-vertex_ready = init_vertex()
 
 async def generate_image(prompt: str) -> Optional[str]:
     """Generates an image using Imagen 3 via Vertex AI."""
-    if not PROJECT_ID or not LOCATION:
-        logger.error("PROJECT_ID or LOCATION not configured for image generation.")
-        return None
-
-    url = f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/{PROJECT_ID}/locations/{LOCATION}/publishers/google/models/imagegeneration:predict"
-
-    try:
-        creds = get_credentials()
-        if not creds:
-            return None
-
-        # Ensure credentials have a token
-        auth_request = google.auth.transport.requests.Request()
-        creds.refresh(auth_request)
-
-        headers = {
-            "Authorization": f"Bearer {creds.token}",
-            "Content-Type": "application/json; charset=utf-8",
-        }
-
-        data = {
-            "instances": [{"prompt": prompt}],
-            "parameters": {
-                "aspectRatio": "16:9",
-                "sampleCount": 1,
-            },
-        }
-
-        async with httpx.AsyncClient(timeout=120.0) as client:
-            response = await client.post(url, headers=headers, json=data)
-            
-            if response.status_code != 200:
-                logger.error(f"Vertex AI Image Error: {response.status_code} - {response.text}")
-                return None
-
-            response_data = response.json()
-            predictions = response_data.get("predictions")
-            
-            if predictions and len(predictions) > 0:
-                base64_image = predictions[0].get("bytesBase64Encoded")
-                if base64_image:
-                    return f"data:image/png;base64,{base64_image}"
-            
-            return None
-
-    except Exception as e:
-        logger.error(f"Error generating image: {e}")
-        return None
-
-from .llm_providers import get_llm_provider
+    return await get_llm_service().generate_image(prompt)
 
 
-
-async def generate_response(user_input: str, role: str = "DELTA") -> str:
-
-
-
+async def generate_response(
+    user_input: str,
+    role: str = "DELTA",
+    history: Optional[List[Dict[str, Any]]] = None,
+) -> Union[str, Dict[str, Any]]:
     """Main entry point for generating responses."""
+    return await get_llm_service().generate_response(user_input, role=role, history=history)
 
 
-
-    system_prompt = DELTA_SYSTEM_PROMPT if role == "DELTA" else EDUCATIONAL_GUIDE_PROMPT
-
-
-
-    provider = get_llm_provider()
-
-
-
-    return await provider.generate_response(user_input, system_prompt)
-
-
-
-
-
-
-
-async def generate_stream(user_input: str, role: str = "DELTA"):
-
-
-
+async def generate_stream(
+    user_input: str,
+    role: str = "DELTA",
+    history: Optional[List[Dict[str, Any]]] = None,
+):
     """Main entry point for generating streaming responses."""
-
-
-
-    system_prompt = DELTA_SYSTEM_PROMPT if role == "DELTA" else EDUCATIONAL_GUIDE_PROMPT
-
-
-
-    provider = get_llm_provider()
-
-
-
-    async for chunk in provider.generate_response_stream(user_input, system_prompt):
-
-
-
+    async for chunk in get_llm_service().generate_stream(
+        user_input, role=role, history=history
+    ):
         yield chunk
 
 
-
-
-
-
-
 async def generate_summary_from_messages(messages: List[Dict[str, str]]) -> str:
-
     """Generates a summary of a conversation."""
-
-    formatted_messages = "\n".join([f"{msg['sender']}: {msg['content']}" for msg in messages])
-
-    prompt = f"Please provide a concise scientific summary of the following conversation, highlighting key hydrological insights and action items:\n\n{formatted_messages}\n\nSummary:"
-
-    provider = get_llm_provider()
-
-    return await provider.generate_response(prompt, "You are a professional hydrological research summarizer.")
+    return await get_llm_service().generate_summary_from_messages(messages)

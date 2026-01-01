@@ -1,12 +1,20 @@
 from abc import ABC, abstractmethod
-from typing import List, Dict, Optional
-import asyncio
+from typing import List, Dict, Optional, Any, Union
+import inspect
 import os
-import google.genai as genai
 import logging
-from utils.config import config
+
+try:
+    import google.genai as genai
+    from google.genai import types
+except ImportError:  # pragma: no cover - optional dependency
+    genai = None
+    types = None
+
+from utils.config import Settings
 
 logger = logging.getLogger(__name__)
+GENAI_AVAILABLE = genai is not None
 
 class LLMProvider(ABC):
     @abstractmethod
@@ -16,17 +24,35 @@ class LLMProvider(ABC):
     @abstractmethod
     async def generate_response_stream(self, prompt: str, system_prompt: str):
         pass
+    
+    # Optional methods for history support
+    async def generate_response_with_history(self, prompt: str, system_prompt: str, history: List[Dict[str, Any]], tools: Optional[List[Any]] = None) -> Union[str, Dict[str, Any]]:
+        return await self.generate_response(prompt, system_prompt)
+
+    async def generate_response_stream_with_history(self, prompt: str, system_prompt: str, history: List[Dict[str, Any]]):
+        async for chunk in self.generate_response_stream(prompt, system_prompt):
+            yield chunk
 
 class GeminiProvider(LLMProvider):
-    def __init__(self, api_key: Optional[str] = None, model_name: str = "gemini-2.0-flash"):
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        model_name: str = "gemini-2.0-flash",
+        project_id: Optional[str] = None,
+        location: str = "us-central1",
+    ):
         from utils.google_utils import get_credentials
         self.api_key = api_key
         self.model_name = model_name
         
-        project_id = config.get("PROJECT_ID")
-        location = config.get("LOCATION", "us-central1")
+        self.project_id = project_id
+        self.location = location
         
         self.client = None
+
+        if not genai:
+            logger.error("google.genai is not installed. Gemini provider unavailable.")
+            return
         
         if project_id:
             try:
@@ -52,84 +78,116 @@ class GeminiProvider(LLMProvider):
             logger.info("Initializing Gemini via Google AI Studio")
             self.client = genai.Client(api_key=api_key)
 
+    def _format_history(self, history: List[Dict[str, Any]]) -> List[types.Content]:
+        """Formats internal history format to Gemini content objects."""
+        formatted_contents = []
+        for msg in history:
+            role = "user" if msg.get("role") == "user" or msg.get("sender") == "user" else "model"
+            content = msg.get("content", "")
+            formatted_contents.append(
+                types.Content(
+                    role=role,
+                    parts=[types.Part.from_text(text=content)]
+                )
+            )
+        return formatted_contents
+
     async def generate_response(self, prompt: str, system_prompt: str) -> str:
+        return await self.generate_response_with_history(prompt, system_prompt, [])
+
+    async def generate_response_with_history(self, prompt: str, system_prompt: str, history: List[Dict[str, Any]], tools: Optional[List[Any]] = None) -> Union[str, Dict[str, Any]]:
         if not self.client:
             return "Error: Gemini client not initialized. Check API keys and credentials."
         try:
+            contents = []
+            if history:
+                contents.extend(self._format_history(history))
+            
+            # Add the current prompt
+            contents.append(types.Content(role="user", parts=[types.Part.from_text(text=prompt)]))
+
+            config_params = {
+                'system_instruction': system_prompt,
+            }
+            if tools:
+                config_params['tools'] = tools
+
             # Use the async client (client.aio)
             response = await self.client.aio.models.generate_content(
                 model=self.model_name,
-                contents=prompt,
-                config={
-                    'system_instruction': system_prompt,
-                }
+                contents=contents,
+                config=config_params
             )
-            if not response or not response.text:
+            
+            if not response:
                 logger.warning("Gemini returned an empty response")
                 return "I'm sorry, I couldn't generate a response. Please try again."
-            return response.text
+
+            # Check for function calls
+            function_calls = []
+            if response.candidates:
+                for part in response.candidates[0].content.parts:
+                    if part.function_call:
+                        function_calls.append({
+                            "name": part.function_call.name,
+                            "args": part.function_call.args
+                        })
+
+            text_response = response.text or ""
+
+            if function_calls:
+                return {
+                    "text": text_response,
+                    "function_calls": function_calls
+                }
+            
+            return text_response
+
         except Exception as e:
             logger.error(f"Gemini Provider Error: {e}")
             return f"Error: {str(e)}"
 
     async def generate_response_stream(self, prompt: str, system_prompt: str):
+        async for chunk in self.generate_response_stream_with_history(prompt, system_prompt, []):
+            yield chunk
+
+    async def generate_response_stream_with_history(self, prompt: str, system_prompt: str, history: List[Dict[str, Any]]):
         if not self.client:
             yield "Error: Gemini client not initialized."
             return
         try:
+            contents = []
+            if history:
+                contents.extend(self._format_history(history))
+            
+            contents.append(types.Content(role="user", parts=[types.Part.from_text(text=prompt)]))
+
             # Use the async client (client.aio) for streaming
-            async for chunk in self.client.aio.models.generate_content_stream(
+            # Note: Streaming with tools is complex, omitting tools for stream for now or we can add them but need to handle non-text chunks
+            stream = self.client.aio.models.generate_content_stream(
                 model=self.model_name,
-                contents=prompt,
+                contents=contents,
                 config={
                     'system_instruction': system_prompt,
                 }
-            ):
+            )
+            if inspect.isawaitable(stream):
+                stream = await stream
+            async for chunk in stream:
                 if chunk and chunk.text:
                     yield chunk.text
         except Exception as e:
             logger.error(f"Gemini Stream Error: {e}")
             yield f"Error: {str(e)}"
 
-class VertexAIProvider(LLMProvider):
-    """
-    Specifically for Vertex AI using the standard vertexai SDK 
-    (backup in case google-genai unified client has issues)
-    """
-    def __init__(self, model_name: str = "gemini-2.0-flash"):
-        from vertexai.generative_models import GenerativeModel
-        self.model = GenerativeModel(model_name)
+def get_llm_provider(settings: Settings) -> LLMProvider:
+    api_key = settings.google_api_key
+    model_name = settings.llm_model
 
-    async def generate_response(self, prompt: str, system_prompt: str) -> str:
-        try:
-            response = await asyncio.to_thread(
-                self.model.generate_content,
-                prompt,
-                generation_config={"temperature": 0.2},
-                system_instruction=system_prompt
-            )
-            return response.text
-        except Exception as e:
-            logger.error(f"VertexAI Provider Error: {e}")
-            return f"Error: {str(e)}"
-
-    async def generate_response_stream(self, prompt: str, system_prompt: str):
-        try:
-            responses = self.model.generate_content(
-                prompt,
-                generation_config={"temperature": 0.2},
-                system_instruction=system_prompt,
-                stream=True
-            )
-            for response in responses:
-                yield response.text
-        except Exception as e:
-            logger.error(f"VertexAI Stream Error: {e}")
-            yield f"Error: {str(e)}"
-
-def get_llm_provider() -> LLMProvider:
-    api_key = config.get("GOOGLE_API_KEY")
-    model_name = config.get("LLM_MODEL", "gemini-2.0-flash")
-    
     # We use GeminiProvider which now handles both Vertex and AI Studio
-    return GeminiProvider(api_key=api_key, model_name=model_name)
+    return GeminiProvider(
+        api_key=api_key,
+        model_name=model_name,
+        project_id=settings.project_id,
+        location=settings.location,
+    )

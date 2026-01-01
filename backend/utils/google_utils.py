@@ -12,7 +12,7 @@ from google.cloud import storage
 from google.cloud import vision
 # import google.generativeai as genai  # Deprecated
 
-from utils.config import config
+from utils.config import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +81,7 @@ def get_tts_client():
 def get_storage_client():
     creds = get_credentials()
     if creds:
-        return storage.Client(credentials=creds, project=config.get("PROJECT_ID"))
+        return storage.Client(credentials=creds, project=get_settings().project_id)
     return storage.Client()
 
 def get_vision_client():
