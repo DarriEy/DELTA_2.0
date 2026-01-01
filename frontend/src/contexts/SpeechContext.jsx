@@ -50,6 +50,10 @@ export const SpeechProvider = ({ children }) => {
   }, []);
 
   const speak = useCallback(async (text) => {
+    if (!text || text.trim() === "") {
+      console.log("DELTA: Skipping speech synthesis for empty text.");
+      return;
+    }
     console.log("DELTA: Synthesizing speech for:", text.substring(0, 50) + "...");
     try {
       const audioContent = await generateSpeechFromText(text);

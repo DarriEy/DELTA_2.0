@@ -51,6 +51,45 @@ def retry_with_backoff(max_attempts=5, base_delay=2, backoff_factor=2):
         return wrapper
     return decorator
 
+def retry_async_generator(max_attempts=5, base_delay=2, backoff_factor=2):
+    def decorator(func):
+        @functools.wraps(func)
+        async def wrapper(*args, **kwargs):
+            attempt = 0
+            while attempt < max_attempts:
+                try:
+                    # Collect all chunks from the generator
+                    chunks = []
+                    async for chunk in func(*args, **kwargs):
+                        chunks.append(chunk)
+                    
+                    # Define a nested async generator to yield the collected chunks
+                    async def chunk_generator():
+                        for c in chunks:
+                            yield c
+                    return chunk_generator()
+                except Exception as e:
+                    attempt += 1
+                    err_msg = str(e)
+                    if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg:
+                        if attempt >= max_attempts:
+                            raise e
+                        
+                        delay = base_delay * (backoff_factor ** (attempt - 1))
+                        import re
+                        match = re.search(r"retry in ([\d\.]+)s", err_msg)
+                        if match:
+                            try:
+                                delay = max(delay, float(match.group(1)) + 1.0)
+                            except ValueError: pass
+                            
+                        logger.warning(f"Gemini Stream rate limited. Retrying in {delay:.2f}s...")
+                        await asyncio.sleep(delay)
+                    else:
+                        raise e
+        return wrapper
+    return decorator
+
 class LLMProvider(ABC):
     @abstractmethod
     async def generate_response(self, prompt: str, system_prompt: str) -> str:
@@ -187,7 +226,7 @@ class GeminiProvider(LLMProvider):
         async for chunk in self.generate_response_stream_with_history(prompt, system_prompt, []):
             yield chunk
 
-    @retry_with_backoff(max_attempts=8, base_delay=2)
+    @retry_async_generator(max_attempts=8, base_delay=2)
     async def generate_response_stream_with_history(self, prompt: str, system_prompt: str, history: List[Dict[str, Any]]):
         if not self.client:
             yield "Error: Gemini client not initialized."
