@@ -26,6 +26,7 @@ const AnimatedAvatar = () => {
     activeMode,
     setActiveMode,
     sendMessage,
+    addLocalAssistantMessage,
     isLoading: isConversationLoading,
     createNewConversation
   } = useConversation();
@@ -53,6 +54,7 @@ const AnimatedAvatar = () => {
     triggerShake,
   } = useSpeechInteraction({
     sendMessage,
+    addLocalAssistantMessage,
     startListening,
     speak,
     isListening,

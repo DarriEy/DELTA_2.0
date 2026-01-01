@@ -42,6 +42,8 @@ def get_database_url() -> str:
         logger.warning("DATABASE_URL not set, falling back to SQLite")
         return "sqlite:///./fallback.db"
     
+    raw_db_url = raw_db_url.strip()
+    
     # Render and other providers often use postgres://, but SQLAlchemy requires postgresql://
     if raw_db_url.startswith("postgres://"):
         return raw_db_url.replace("postgres://", "postgresql://", 1)

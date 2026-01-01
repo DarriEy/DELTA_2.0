@@ -20,6 +20,7 @@ interface ConversationContextType {
   setActiveMode: (mode: string) => void;
   createNewConversation: (mode: string, userId?: number) => Promise<number | null>;
   addMessage: (role: 'user' | 'assistant' | 'model', content: string) => void;
+  addLocalAssistantMessage: (content: string) => void;
   sendMessage: (text: string, onChunkReceived?: (chunk: string) => void) => Promise<string | undefined>;
   setConversationHistory: (history: Message[]) => void;
 }
@@ -56,6 +57,10 @@ export const ConversationProvider: React.FC<{ children: ReactNode }> = ({ childr
 
   const addMessage = useCallback((role: 'user' | 'assistant' | 'model', content: string) => {
     dispatch({ type: "add", message: { role, content } });
+  }, []);
+
+  const addLocalAssistantMessage = useCallback((content: string) => {
+    dispatch({ type: "add", message: { role: 'assistant', content } });
   }, []);
 
   const setConversationHistory = useCallback((history: Message[]) => {
@@ -114,6 +119,7 @@ export const ConversationProvider: React.FC<{ children: ReactNode }> = ({ childr
     setActiveMode,
     createNewConversation,
     addMessage,
+    addLocalAssistantMessage,
     sendMessage,
     setConversationHistory
   };

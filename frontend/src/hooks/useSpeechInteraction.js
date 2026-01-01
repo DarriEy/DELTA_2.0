@@ -4,6 +4,7 @@ import { useAvatarAnimations } from "./useAvatarAnimations";
 
 export const useSpeechInteraction = ({
   sendMessage,
+  addLocalAssistantMessage,
   startListening,
   speak,
   isListening,
@@ -79,6 +80,10 @@ export const useSpeechInteraction = ({
         "Hi I'm Delta, your personal hydrological research assistant. How should we save the world today?";
       console.log("DELTA: Speaking introduction...");
       try {
+        // Add to UI history so user sees it
+        if (addLocalAssistantMessage) {
+          addLocalAssistantMessage(greeting);
+        }
         await speak(greeting);
         setIntroductionSpoken(true);
         console.log("DELTA: Greeting finished, starting to listen...");

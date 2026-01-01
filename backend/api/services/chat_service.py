@@ -150,8 +150,15 @@ class ChatService:
         log.info("Requesting LLM stream...")
         try:
             async for chunk in self.llm_service.generate_stream(user_input, history=history):
-                full_response += chunk
-                yield f"data: {chunk}\n\n"
+                if chunk:
+                    full_response += chunk
+                    # SSE requires each line to start with "data: " if we want to preserve newlines,
+                    # but for simplicity and frontend compatibility, we can just send the chunk.
+                    # However, if the chunk contains newlines, the frontend split logic might break.
+                    # Better to escape newlines or send as multiple data lines.
+                    lines = chunk.split('\n')
+                    for i, line in enumerate(lines):
+                        yield f"data: {line}{'\\n' if i < len(lines) - 1 else ''}\n\n"
         except Exception as e:
             log.error("LLM Stream Error: %s", e)
             yield f"data: Error: LLM stream failed\n\n"
