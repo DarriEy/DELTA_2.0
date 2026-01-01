@@ -23,20 +23,15 @@ jobs:
       run: |
         cd backend
         python -m pip install --upgrade pip
-        pip install -r requirements-core.txt || echo "Core dependency installation failed, skipping..."
-    - name: Lint with flake8
-      run: |
-        pip install flake8
-        # stop the build if there are Python syntax errors or undefined names
-        flake8 backend/ --count --select=E9,F63,F7,F82 --show-source --statistics || echo "Linting issues found but continuing..."
-    - name: Run health check test
+        pip install -r requirements.txt
+        pip install pytest pytest-asyncio
+    - name: Run tests
       env:
         PYTHONPATH: ${{ github.workspace }}/backend
+        DATABASE_URL: sqlite:///./test.db
       run: |
-        echo "Running backend health tests..."
-        # Test imports from the root of the backend
-        python -c "import modules.modeling; print('Modules modeling imported')"
-        python -c "from api.main import app; print('App imported successfully')"
+        cd backend
+        python -m pytest tests/ -v
 
   frontend-build:
     runs-on: ubuntu-latest
@@ -49,8 +44,8 @@ jobs:
         cache: 'npm'
         cache-dependency-path: package-lock.json
     - name: Install dependencies
+      run: npm ci
+    - name: Build frontend
       run: |
-        npm ci
-    - name: Build
-      run: |
-        npm run frontend:build
+        cd frontend
+        npm run build

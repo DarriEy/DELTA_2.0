@@ -29,11 +29,11 @@ jobs:
 
       - name: Install and Build 🔧
         env:
-          VITE_APP_API_BASE_URL: https://delta-backend-zom0.onrender.com
+          VITE_API_URL: https://delta-backend-zom0.onrender.com
         run: |
           npm ci
-          npm run frontend:build
-          ls -R frontend/dist/
+          cd frontend && npm run build
+          ls -la dist/
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
