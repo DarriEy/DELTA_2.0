@@ -105,8 +105,13 @@ def create_app() -> FastAPI:
             return
         db = session_factory()
         try:
-            # Simple placeholder for initial user creation
-            pass
+            from .services.user_service import get_user_service
+            user_service = get_user_service()
+            if not user_service.get_user_by_username(db, "commander"):
+                log.info("Creating initial default user: commander")
+                user_service.create_user(db, "commander", "commander@delta.ai", "delta123")
+        except Exception as e:
+            log.error("Failed to create initial user: %s", e)
         finally:
             db.close()
 

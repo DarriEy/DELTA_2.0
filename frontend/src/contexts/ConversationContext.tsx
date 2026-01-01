@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useReducer, ReactNode } from 'react';
 import { apiClient } from '../api/client';
-import { conversationReducer, Message, ConversationAction } from './conversationReducer';
+import { conversationReducer } from './conversationReducer';
+import type { Message, ConversationAction } from './conversationReducer';
 
 interface Conversation {
   id: number;
@@ -26,6 +27,7 @@ interface ConversationContextType {
 const ConversationContext = createContext<ConversationContextType | undefined>(undefined);
 
 export const ConversationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  console.log("DELTA: ConversationProvider rendering");
   const [currentConversationId, setCurrentConversationId] = useState<number | null>(null);
   const [conversationHistory, dispatch] = useReducer(conversationReducer, []);
   const [activeMode, setActiveMode] = useState<string>('general');

@@ -128,14 +128,16 @@ export const apiClient = {
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let result = '';
+    let buffer = '';
 
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      const chunk = decoder.decode(value, { stream: true });
       
-      // Parse SSE data
-      const lines = chunk.split('\n');
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
       for (const line of lines) {
         if (line.startsWith('data: ')) {
           const content = line.slice(6);
@@ -144,6 +146,14 @@ export const apiClient = {
         }
       }
     }
+    
+    // Process remaining buffer
+    if (buffer.startsWith('data: ')) {
+      const content = buffer.slice(6);
+      result += content;
+      if (onChunk) onChunk(content);
+    }
+    
     return result;
   }
 };

@@ -4,6 +4,7 @@ import { generateSpeechFromText } from '../api/media';
 const SpeechContext = createContext();
 
 export const SpeechProvider = ({ children }) => {
+  console.log("DELTA: SpeechProvider rendering");
   const [isListening, setIsListening] = useState(false);
   const [isTalking, setIsTalking] = useState(false);
   const recognition = useRef(null);

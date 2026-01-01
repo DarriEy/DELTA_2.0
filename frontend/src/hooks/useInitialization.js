@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { login, isAuthenticated } from "../api/auth";
 
 export const useInitialization = ({
   currentConversationId,
@@ -14,6 +15,17 @@ export const useInitialization = ({
     const init = async () => {
       console.log("DELTA: Initializing core systems...");
       try {
+        // Auto-login for dev if not authenticated
+        if (!isAuthenticated()) {
+          console.log("DELTA: No active session, attempting auto-login...");
+          try {
+            await login("commander", "delta123");
+            console.log("DELTA: Auto-login successful.");
+          } catch (loginErr) {
+            console.warn("DELTA: Auto-login failed, proceed as guest (may fail API calls):", loginErr);
+          }
+        }
+
         let convId = currentConversationId;
         if (!convId) {
           console.log("DELTA: Creating new secure conversation...");
