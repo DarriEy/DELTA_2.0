@@ -60,6 +60,8 @@ def get_credentials():
         
         if is_local_path:
             logger.warning(f"Ignoring local-only credentials path: {creds_path}")
+            # Unset it from environment so google.auth.default() doesn't crash trying to load it
+            os.environ.pop("GOOGLE_APPLICATION_CREDENTIALS", None)
         
         # Check if it's just a filename and might be in the same dir as this script
         # or in the backend root

@@ -216,6 +216,10 @@ class GeminiProvider(LLMProvider):
             return text_response
 
         except Exception as e:
+            if "404" in str(e) and self.model_name != "gemini-2.0-flash":
+                logger.warning(f"Model {self.model_name} not found, falling back to gemini-2.0-flash")
+                self.model_name = "gemini-2.0-flash"
+                return await self.generate_response_with_history(prompt, system_prompt, history, tools)
             # The decorator handles retrying for 429
             raise e
 
@@ -250,6 +254,13 @@ class GeminiProvider(LLMProvider):
                 if chunk and chunk.text:
                     yield chunk.text
         except Exception as e:
+            if "404" in str(e) and self.model_name != "gemini-2.0-flash":
+                logger.warning(f"Model {self.model_name} not found, falling back to gemini-2.0-flash")
+                # Create a temporary provider or just recurse with new model
+                self.model_name = "gemini-2.0-flash"
+                async for chunk in self.generate_response_stream_with_history(prompt, system_prompt, history):
+                    yield chunk
+                return
             # The decorator handles retrying for 429
             raise e
 
