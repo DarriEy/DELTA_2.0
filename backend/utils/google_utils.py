@@ -21,7 +21,7 @@ def get_credentials():
     Centralized credential retrieval.
     1. Checks for GOOGLE_CREDENTIALS_JSON (Raw JSON string)
     2. Checks for GOOGLE_CREDENTIALS_BASE64
-    3. Checks for JSON file path
+    3. Checks for valid JSON file path
     4. Falls back to default credentials
     """
     scopes = ["https://www.googleapis.com/auth/cloud-platform"]
@@ -45,54 +45,59 @@ def get_credentials():
         except Exception as e:
             logger.error(f"Error decoding GOOGLE_CREDENTIALS_BASE64: {e}")
 
-    # 2. File path
+    # 3. File path handling
     creds_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
     if creds_path:
-        # Check if it's a local-only path (e.g. starting with /Users/ on a non-macOS system)
+        # If it's a local path from another OS, ignore it immediately
         import platform
-        is_local_path = creds_path.startswith("/Users/") and platform.system() != "Darwin"
+        is_foreign_path = creds_path.startswith("/Users/") and platform.system() != "Darwin"
         
-        if not is_local_path and os.path.exists(creds_path):
+        if is_foreign_path:
+            logger.warning(f"Ignoring foreign credentials path: {creds_path}")
+            # IMPORTANT: Temporary remove it from environ so google.auth.default doesn't try to use it
+            # We use a context-local approach or just pop it if we know it's garbage
+            os.environ.pop("GOOGLE_APPLICATION_CREDENTIALS", None)
+            creds_path = None # Reset for later checks
+        elif os.path.exists(creds_path):
             try:
                 return service_account.Credentials.from_service_account_file(creds_path, scopes=scopes)
             except Exception as e:
                 logger.error(f"Error loading service account file at {creds_path}: {e}")
-        
-        if is_local_path:
-            logger.warning(f"Ignoring local-only credentials path: {creds_path}")
-            # Unset it from environment so google.auth.default() doesn't crash trying to load it
-            os.environ.pop("GOOGLE_APPLICATION_CREDENTIALS", None)
-        
-        # Check if it's just a filename and might be in the same dir as this script
-        # or in the backend root
-        filename = os.path.basename(creds_path)
-        search_paths = [
-            filename,
-            os.path.join(os.getcwd(), filename),
-            os.path.join(os.path.dirname(os.path.dirname(__file__)), filename),
-            os.path.join(os.path.dirname(__file__), filename),
-            "/app/" + filename,
-            "/etc/secrets/" + filename # Render secrets path
-        ]
-        
-        for p in search_paths:
-            if os.path.exists(p):
-                try:
-                    logger.info(f"Found credentials file at {p}")
-                    return service_account.Credentials.from_service_account_file(p, scopes=scopes)
-                except Exception as e:
-                    logger.error(f"Error loading service account file at {p}: {e}")
-
     
-    # 3. Default
+    # 4. Search fallback paths if we don't have credentials yet
+    # Use the original filename if provided, otherwise default
+    filename = os.path.basename(creds_path) if creds_path else "google-credentials.json"
+    search_paths = [
+        filename,
+        os.path.join(os.getcwd(), filename),
+        os.path.join(os.path.dirname(os.path.dirname(__file__)), filename),
+        os.path.join(os.path.dirname(__file__), filename),
+        "/app/" + filename,
+        "/etc/secrets/" + filename
+    ]
+    
+    for p in search_paths:
+        if os.path.exists(p):
+            try:
+                logger.info(f"Found credentials file at {p}")
+                # Set it so other libraries might find it too
+                os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = p
+                return service_account.Credentials.from_service_account_file(p, scopes=scopes)
+            except Exception as e:
+                logger.error(f"Error loading service account file at {p}: {e}")
+
+    # 5. Default (only if env var is NOT a broken path)
     try:
+        # Re-check env var before calling default
+        current_env_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+        if current_env_path and not os.path.exists(current_env_path):
+            logger.warning(f"Clearing broken GOOGLE_APPLICATION_CREDENTIALS path: {current_env_path}")
+            os.environ.pop("GOOGLE_APPLICATION_CREDENTIALS", None)
+
         credentials, project = google.auth.default(scopes=scopes)
         return credentials
     except Exception as e:
-        # If we have a path set that didn't exist, we probably shouldn't try default 
-        # because it might be a broken local path that's making it fail.
-        if not creds_path:
-            logger.error(f"Error getting default credentials: {e}")
+        logger.error(f"Error getting default credentials: {e}")
         return None
 
 def get_tts_client():

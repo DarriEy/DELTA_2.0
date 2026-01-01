@@ -80,6 +80,7 @@ export const SpeechProvider = ({ children }) => {
         });
       } else {
         console.error("DELTA: No audio content received from backend.");
+        setIsTalking(false);
       }
     } catch (error) {
       console.error('DELTA: Speech synthesis error:', error);

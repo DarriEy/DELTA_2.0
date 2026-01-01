@@ -86,7 +86,7 @@ export const useSpeechInteraction = ({
         }
         await speak(greeting);
         setIntroductionSpoken(true);
-        console.log("DELTA: Greeting finished, starting to listen...");
+        console.log("DELTA: Greeting finished, attempting to start microphone...");
         startListening(handleSpeechRecognitionResult, (error) => {
           console.error(
             `DELTA: Speech recognition error during initial listen: ${error}`
@@ -94,14 +94,16 @@ export const useSpeechInteraction = ({
           triggerShake();
         });
       } catch (err) {
-        console.error("DELTA: Speech failed:", err);
+        console.error("DELTA: Initialization sequence failed:", err);
       }
     } else if (!isListening && !isTalking) {
-      console.log("DELTA: Starting speech recognition...");
+      console.log("DELTA: Manual microphone trigger...");
       startListening(handleSpeechRecognitionResult, (error) => {
         console.error(`Speech recognition error: ${error}`);
         triggerShake();
       });
+    } else {
+      console.log("DELTA: Cannot start microphone - busy. State:", { isListening, isTalking });
     }
   }, [
     introductionSpoken,
