@@ -68,6 +68,10 @@ def create_app() -> FastAPI:
         allow_headers=["*"],  # Allows all headers
     )
 
+    @app.get("/")
+    async def root():
+        return {"message": "DELTA backend is running"}
+
     # Add this OPTIONS handler before including the router
     @app.options("/{full_path:path}")
     async def handle_options_request(request: Request, full_path: str):
