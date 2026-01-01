@@ -13,7 +13,8 @@ export async function login(username: string, password: string): Promise<LoginRe
   formData.append('username', username);
   formData.append('password', password);
 
-  const response = await fetch(`${API_BASE_URL}/api/users/login`, {
+  // API_BASE_URL already ends with /api
+  const response = await fetch(`${API_BASE_URL}/users/login`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
@@ -22,8 +23,12 @@ export async function login(username: string, password: string): Promise<LoginRe
   });
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.detail || 'Login failed');
+    let detail = 'Login failed';
+    try {
+      const errorData = await response.json();
+      detail = errorData.detail || detail;
+    } catch (e) {}
+    throw new Error(detail);
   }
 
   const data = await response.json();

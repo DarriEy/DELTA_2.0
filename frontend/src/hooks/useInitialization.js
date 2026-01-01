@@ -29,7 +29,12 @@ export const useInitialization = ({
         let convId = currentConversationId;
         if (!convId) {
           console.log("DELTA: Creating new secure conversation...");
-          convId = await createNewConversation("general");
+          // createNewConversation returns data.id which is a number
+          const newId = await createNewConversation("general");
+          if (newId) {
+            console.log("DELTA: Conversation created with ID:", newId);
+            convId = newId;
+          }
         }
 
         if (convId) {
