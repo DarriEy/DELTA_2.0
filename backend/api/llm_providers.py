@@ -3,6 +3,8 @@ from typing import List, Dict, Optional, Any, Union
 import inspect
 import os
 import logging
+import asyncio
+import functools
 
 try:
     import google.genai as genai
@@ -15,6 +17,39 @@ from utils.config import Settings
 
 logger = logging.getLogger(__name__)
 GENAI_AVAILABLE = genai is not None
+
+def retry_with_backoff(max_attempts=5, base_delay=2, backoff_factor=2):
+    def decorator(func):
+        @functools.wraps(func)
+        async def wrapper(*args, **kwargs):
+            attempt = 0
+            while attempt < max_attempts:
+                try:
+                    return await func(*args, **kwargs)
+                except Exception as e:
+                    attempt += 1
+                    err_msg = str(e)
+                    if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg:
+                        if attempt >= max_attempts:
+                            logger.error(f"Gemini API: Max retry attempts reached. Last error: {err_msg}")
+                            raise e
+                        
+                        # Try to extract suggested retry time from error message
+                        # e.g., "Please retry in 45.339867259s"
+                        delay = base_delay * (backoff_factor ** (attempt - 1))
+                        import re
+                        match = re.search(r"retry in ([\d\.]+)s", err_msg)
+                        if match:
+                            suggested_delay = float(match.group(1)) + 1.0 # Add a buffer
+                            delay = max(delay, suggested_delay)
+                        
+                        logger.warning(f"Gemini API rate limited (429). Retrying in {delay:.2f}s (Attempt {attempt}/{max_attempts})...")
+                        await asyncio.sleep(delay)
+                    else:
+                        raise e
+            return await func(*args, **kwargs)
+        return wrapper
+    return decorator
 
 class LLMProvider(ABC):
     @abstractmethod
@@ -95,6 +130,7 @@ class GeminiProvider(LLMProvider):
     async def generate_response(self, prompt: str, system_prompt: str) -> str:
         return await self.generate_response_with_history(prompt, system_prompt, [])
 
+    @retry_with_backoff(max_attempts=8, base_delay=2)
     async def generate_response_with_history(self, prompt: str, system_prompt: str, history: List[Dict[str, Any]], tools: Optional[List[Any]] = None) -> Union[str, Dict[str, Any]]:
         if not self.client:
             return "Error: Gemini client not initialized. Check API keys and credentials."
@@ -144,13 +180,14 @@ class GeminiProvider(LLMProvider):
             return text_response
 
         except Exception as e:
-            logger.error(f"Gemini Provider Error: {e}")
-            return f"Error: {str(e)}"
+            # The decorator handles retrying for 429
+            raise e
 
     async def generate_response_stream(self, prompt: str, system_prompt: str):
         async for chunk in self.generate_response_stream_with_history(prompt, system_prompt, []):
             yield chunk
 
+    @retry_with_backoff(max_attempts=8, base_delay=2)
     async def generate_response_stream_with_history(self, prompt: str, system_prompt: str, history: List[Dict[str, Any]]):
         if not self.client:
             yield "Error: Gemini client not initialized."
@@ -177,8 +214,8 @@ class GeminiProvider(LLMProvider):
                 if chunk and chunk.text:
                     yield chunk.text
         except Exception as e:
-            logger.error(f"Gemini Stream Error: {e}")
-            yield f"Error: {str(e)}"
+            # The decorator handles retrying for 429
+            raise e
 
 def get_llm_provider(settings: Settings) -> LLMProvider:
     api_key = settings.google_api_key

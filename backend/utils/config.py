@@ -36,7 +36,7 @@ class Settings:
             project_id=get_env("PROJECT_ID"),
             location=get_env("LOCATION", "us-central1"),
             google_application_credentials=get_env("GOOGLE_APPLICATION_CREDENTIALS"),
-            llm_model=get_env("LLM_MODEL", "gemini-2.0-flash"),
+            llm_model=get_env("LLM_MODEL", "gemini-1.5-flash"),
             image_model="imagen-3",
             hydro_model_base_url=get_env("HYDRO_MODEL_BASE_URL", "http://localhost:8080"),
             symfluence_code_dir=get_env(
