@@ -128,10 +128,12 @@ class ChatService:
         return final_text_response, None
 
     async def process_user_input_stream(self, db: Session, user_input: str, conversation_id: int):
+        log.info("Starting stream for conversation %s", conversation_id)
         _, history, last_message_index, error = await self._prepare_conversation_turn(
             db, user_input, conversation_id
         )
         if error:
+            log.error("Stream error: %s", error)
             yield f"data: Error: {error}\n\n"
             return
 
@@ -145,10 +147,17 @@ class ChatService:
             return
 
         full_response = ""
-        async for chunk in self.llm_service.generate_stream(user_input, history=history):
-            full_response += chunk
-            yield f"data: {chunk}\n\n"
+        log.info("Requesting LLM stream...")
+        try:
+            async for chunk in self.llm_service.generate_stream(user_input, history=history):
+                full_response += chunk
+                yield f"data: {chunk}\n\n"
+        except Exception as e:
+            log.error("LLM Stream Error: %s", e)
+            yield f"data: Error: LLM stream failed\n\n"
+            return
 
+        log.info("Stream finished, persisting response...")
         try:
             self.create_message(db, full_response, "assistant", conversation_id, last_message_index + 2)
             db.commit()
