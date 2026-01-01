@@ -18,75 +18,6 @@ from utils.config import Settings
 logger = logging.getLogger(__name__)
 GENAI_AVAILABLE = genai is not None
 
-def retry_with_backoff(max_attempts=5, base_delay=2, backoff_factor=2):
-    def decorator(func):
-        @functools.wraps(func)
-        async def wrapper(*args, **kwargs):
-            attempt = 0
-            while attempt < max_attempts:
-                try:
-                    return await func(*args, **kwargs)
-                except Exception as e:
-                    attempt += 1
-                    err_msg = str(e)
-                    if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg:
-                        if attempt >= max_attempts:
-                            logger.error(f"Gemini API: Max retry attempts reached. Last error: {err_msg}")
-                            raise e
-                        
-                        # Try to extract suggested retry time from error message
-                        # e.g., "Please retry in 45.339867259s"
-                        delay = base_delay * (backoff_factor ** (attempt - 1))
-                        import re
-                        match = re.search(r"retry in ([\d\.]+)s", err_msg)
-                        if match:
-                            suggested_delay = float(match.group(1)) + 1.0 # Add a buffer
-                            delay = max(delay, suggested_delay)
-                        
-                        logger.warning(f"Gemini API rate limited (429). Retrying in {delay:.2f}s (Attempt {attempt}/{max_attempts})...")
-                        await asyncio.sleep(delay)
-                    else:
-                        raise e
-            return await func(*args, **kwargs)
-        return wrapper
-    return decorator
-
-def retry_async_generator(max_attempts=5, base_delay=2, backoff_factor=2):
-    def decorator(func):
-        @functools.wraps(func)
-        async def wrapper(*args, **kwargs):
-            attempt = 0
-            while attempt < max_attempts:
-                try:
-                    # We attempt to iterate the generator. 
-                    # Note: If it fails halfway through, retrying will repeat earlier chunks.
-                    # However, 429s usually happen at the very beginning of the stream.
-                    async for chunk in func(*args, **kwargs):
-                        yield chunk
-                    return # Success
-                except Exception as e:
-                    attempt += 1
-                    err_msg = str(e)
-                    if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg:
-                        if attempt >= max_attempts:
-                            logger.error(f"Gemini Stream: Max retry attempts reached. Last error: {err_msg}")
-                            raise e
-                        
-                        delay = base_delay * (backoff_factor ** (attempt - 1))
-                        import re
-                        match = re.search(r"retry in ([\d\.]+)s", err_msg)
-                        if match:
-                            try:
-                                delay = max(delay, float(match.group(1)) + 1.0)
-                            except ValueError: pass
-                            
-                        logger.warning(f"Gemini Stream rate limited (429). Retrying in {delay:.2f}s (Attempt {attempt}/{max_attempts})...")
-                        await asyncio.sleep(delay)
-                    else:
-                        raise e
-        return wrapper
-    return decorator
-
 class LLMProvider(ABC):
     @abstractmethod
     async def generate_response(self, prompt: str, system_prompt: str) -> str:
@@ -166,103 +97,151 @@ class GeminiProvider(LLMProvider):
     async def generate_response(self, prompt: str, system_prompt: str) -> str:
         return await self.generate_response_with_history(prompt, system_prompt, [])
 
-    @retry_with_backoff(max_attempts=8, base_delay=2)
     async def generate_response_with_history(self, prompt: str, system_prompt: str, history: List[Dict[str, Any]], tools: Optional[List[Any]] = None) -> Union[str, Dict[str, Any]]:
         if not self.client:
             return "Error: Gemini client not initialized. Check API keys and credentials."
-        try:
-            contents = []
-            if history:
-                contents.extend(self._format_history(history))
-            
-            # Add the current prompt
-            contents.append(types.Content(role="user", parts=[types.Part.from_text(text=prompt)]))
+        
+        attempt = 0
+        max_attempts = 8
+        base_delay = 2
+        
+        while attempt < max_attempts:
+            try:
+                contents = []
+                if history:
+                    contents.extend(self._format_history(history))
+                
+                # Add the current prompt
+                contents.append(types.Content(role="user", parts=[types.Part.from_text(text=prompt)]))
 
-            config_params = {
-                'system_instruction': system_prompt,
-            }
-            if tools:
-                config_params['tools'] = tools
-
-            # Use the async client (client.aio)
-            response = await self.client.aio.models.generate_content(
-                model=self.model_name,
-                contents=contents,
-                config=config_params
-            )
-            
-            if not response:
-                logger.warning("Gemini returned an empty response")
-                return "I'm sorry, I couldn't generate a response. Please try again."
-
-            # Check for function calls
-            function_calls = []
-            if response.candidates:
-                for part in response.candidates[0].content.parts:
-                    if part.function_call:
-                        function_calls.append({
-                            "name": part.function_call.name,
-                            "args": part.function_call.args
-                        })
-
-            text_response = response.text or ""
-
-            if function_calls:
-                return {
-                    "text": text_response,
-                    "function_calls": function_calls
+                config_params = {
+                    'system_instruction': system_prompt,
                 }
-            
-            return text_response
+                if tools:
+                    config_params['tools'] = tools
 
-        except Exception as e:
-            if "404" in str(e) and self.model_name != "gemini-2.0-flash":
-                logger.warning(f"Model {self.model_name} not found, falling back to gemini-2.0-flash")
-                self.model_name = "gemini-2.0-flash"
-                return await self.generate_response_with_history(prompt, system_prompt, history, tools)
-            # The decorator handles retrying for 429
-            raise e
+                # Use the async client (client.aio)
+                response = await self.client.aio.models.generate_content(
+                    model=self.model_name,
+                    contents=contents,
+                    config=config_params
+                )
+                
+                if not response:
+                    logger.warning("Gemini returned an empty response")
+                    return "I'm sorry, I couldn't generate a response. Please try again."
+
+                # Check for function calls
+                function_calls = []
+                if response.candidates:
+                    for part in response.candidates[0].content.parts:
+                        if part.function_call:
+                            function_calls.append({
+                                "name": part.function_call.name,
+                                "args": part.function_call.args
+                            })
+
+                text_response = response.text or ""
+
+                if function_calls:
+                    return {
+                        "text": text_response,
+                        "function_calls": function_calls
+                    }
+                
+                return text_response
+
+            except Exception as e:
+                attempt += 1
+                err_msg = str(e)
+                
+                # Handle 404 (Model not found)
+                if "404" in err_msg and self.model_name != "gemini-2.0-flash":
+                    logger.warning(f"Model {self.model_name} not found, falling back to gemini-2.0-flash")
+                    self.model_name = "gemini-2.0-flash"
+                    attempt = 0 # Reset attempts for new model
+                    continue
+
+                # Handle 429 (Resource exhausted)
+                if ("429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg) and attempt < max_attempts:
+                    import re
+                    delay = base_delay * (2 ** (attempt - 1))
+                    match = re.search(r"retry in ([\d\.]+)s", err_msg)
+                    if match:
+                        try:
+                            delay = max(delay, float(match.group(1)) + 1.0)
+                        except ValueError: pass
+                    
+                    logger.warning(f"Gemini API rate limited (429). Retrying in {delay:.2f}s...")
+                    await asyncio.sleep(delay)
+                else:
+                    logger.error(f"Gemini Provider Final Error: {err_msg}")
+                    return f"Error: {err_msg}"
+        
+        return "Error: Maximum retry attempts reached."
 
     async def generate_response_stream(self, prompt: str, system_prompt: str):
         async for chunk in self.generate_response_stream_with_history(prompt, system_prompt, []):
             yield chunk
 
-    @retry_async_generator(max_attempts=8, base_delay=2)
     async def generate_response_stream_with_history(self, prompt: str, system_prompt: str, history: List[Dict[str, Any]]):
         if not self.client:
             yield "Error: Gemini client not initialized."
             return
-        try:
-            contents = []
-            if history:
-                contents.extend(self._format_history(history))
-            
-            contents.append(types.Content(role="user", parts=[types.Part.from_text(text=prompt)]))
 
-            # Use the async client (client.aio) for streaming
-            # Note: Streaming with tools is complex, omitting tools for stream for now or we can add them but need to handle non-text chunks
-            stream = self.client.aio.models.generate_content_stream(
-                model=self.model_name,
-                contents=contents,
-                config={
-                    'system_instruction': system_prompt,
-                }
-            )
-            if inspect.isawaitable(stream):
-                stream = await stream
-            async for chunk in stream:
-                if chunk and chunk.text:
-                    yield chunk.text
-        except Exception as e:
-            if "404" in str(e) and self.model_name != "gemini-2.0-flash":
-                logger.warning(f"Model {self.model_name} not found, falling back to gemini-2.0-flash")
-                # Create a temporary provider or just recurse with new model
-                self.model_name = "gemini-2.0-flash"
-                async for chunk in self.generate_response_stream_with_history(prompt, system_prompt, history):
-                    yield chunk
-                return
-            # The decorator handles retrying for 429
-            raise e
+        attempt = 0
+        max_attempts = 8
+        base_delay = 2
+        
+        while attempt < max_attempts:
+            try:
+                contents = []
+                if history:
+                    contents.extend(self._format_history(history))
+                
+                contents.append(types.Content(role="user", parts=[types.Part.from_text(text=prompt)]))
+
+                stream = self.client.aio.models.generate_content_stream(
+                    model=self.model_name,
+                    contents=contents,
+                    config={
+                        'system_instruction': system_prompt,
+                    }
+                )
+                if inspect.isawaitable(stream):
+                    stream = await stream
+                async for chunk in stream:
+                    if chunk and chunk.text:
+                        yield chunk.text
+                return # Success
+
+            except Exception as e:
+                attempt += 1
+                err_msg = str(e)
+                
+                # Handle 404
+                if "404" in err_msg and self.model_name != "gemini-2.0-flash":
+                    logger.warning(f"Model {self.model_name} not found, falling back to gemini-2.0-flash")
+                    self.model_name = "gemini-2.0-flash"
+                    attempt = 0
+                    continue
+
+                # Handle 429
+                if ("429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg) and attempt < max_attempts:
+                    import re
+                    delay = base_delay * (2 ** (attempt - 1))
+                    match = re.search(r"retry in ([\d\.]+)s", err_msg)
+                    if match:
+                        try:
+                            delay = max(delay, float(match.group(1)) + 1.0)
+                        except ValueError: pass
+                    
+                    logger.warning(f"Gemini Stream rate limited (429). Retrying in {delay:.2f}s...")
+                    await asyncio.sleep(delay)
+                else:
+                    logger.error(f"Gemini Stream Final Error: {err_msg}")
+                    yield f"Error: {err_msg}"
+                    return
 
 def get_llm_provider(settings: Settings) -> LLMProvider:
     api_key = settings.google_api_key
