@@ -20,8 +20,6 @@ def get_user_by_email(db: Session, email: str):
 def create_conversation(db: Session, conversation_data: dict):
     db_conversation = DBConversation(**conversation_data)
     db.add(db_conversation)
-    db.flush()
-    db.refresh(db_conversation)
-    db_conversation.conversation_id = db_conversation.id
     db.commit()
+    db.refresh(db_conversation)
     return db_conversation

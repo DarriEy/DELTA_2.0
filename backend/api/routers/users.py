@@ -1,63 +1,67 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
-from ..models import get_db, Conversation as DBConversation, Message as DBMessage
+from utils.db import get_db
+from ..models import Conversation as DBConversation, Message as DBMessage
 from ..services import user_service
 from ..schemas import (
     UserCreate, User, 
     ConversationCreate, Conversation, ConversationUpdate,
-    MessageCreate, Message
+    MessageCreate, Message, APIResponse
 )
 from typing import List
 
 router = APIRouter()
 
-@router.post("/users/", response_model=User)
+@router.post("/users/", response_model=APIResponse[User])
 def create_user(user: UserCreate, db: Session = Depends(get_db)):
     existing_user = user_service.get_user_by_email(db, user.email)
     if existing_user:
         raise HTTPException(status_code=409, detail="Email already exists")
 
     try:
-        return user_service.create_user(db, user.username, user.email, user.password)
+        new_user = user_service.create_user(db, user.username, user.email, user.password)
+        return APIResponse(data=new_user)
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
 
-@router.post("/conversations/", response_model=Conversation)
+@router.post("/conversations/", response_model=APIResponse[Conversation])
 def create_conversation(
     conversation: ConversationCreate, db: Session = Depends(get_db)
 ):
     try:
         db_conversation = user_service.create_conversation(db, conversation.dict())
-        return db_conversation
+        return APIResponse(data=db_conversation)
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
 
-@router.get("/conversations/{user_id}", response_model=List[Conversation])
+@router.get("/conversations/{user_id}", response_model=APIResponse[List[Conversation]])
 def get_conversations(user_id: int, db: Session = Depends(get_db)):
-    return db.query(DBConversation).filter(DBConversation.user_id == user_id).all()
+    conversations = db.query(DBConversation).filter(DBConversation.user_id == user_id).all()
+    return APIResponse(data=conversations)
 
-@router.get("/messages/{conversation_id}", response_model=List[Message])
+@router.get("/messages/{conversation_id}", response_model=APIResponse[List[Message]])
 def get_messages(conversation_id: int, db: Session = Depends(get_db)):
-    return (
+    messages = (
         db.query(DBMessage)
         .filter(DBMessage.conversation_id == conversation_id)
         .order_by(DBMessage.message_index)
         .all()
     )
+    return APIResponse(data=messages)
 
-@router.post("/messages/", response_model=Message)
+@router.post("/messages/", response_model=APIResponse[Message])
 def create_message(
-    message: MessageCreate, conversation_id: int, db: Session = Depends(get_db)
+    message: MessageCreate, db: Session = Depends(get_db)
 ):
-    db_message = DBMessage(**message.dict(), conversation_id=conversation_id)
+    db_message = DBMessage(**message.dict())
     db.add(db_message)
     db.commit()
     db.refresh(db_message)
-    return db_message
+    return APIResponse(data=db_message)
 
-@router.put("/conversations/{conversation_id}", response_model=Conversation)
+@router.put("/conversations/{conversation_id}", response_model=APIResponse[Conversation])
 def update_conversation(
     conversation_id: int,
     conversation_update: ConversationUpdate,
@@ -74,7 +78,7 @@ def update_conversation(
 
         db.commit()
         db.refresh(conversation)
-        return conversation
+        return APIResponse(data=conversation)
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))

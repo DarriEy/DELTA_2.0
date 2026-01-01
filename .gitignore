@@ -2,5 +2,14 @@
 marty-tts-74c202d4f256.json
 credentials-base64.txt
 .venv/
+node_modules/
+frontend/node_modules/
+backend/.venv/
 *.pyc
 __pycache__/
+.DS_Store
+*.db
+*#
+*~
+.pytest_cache/
+.coverage

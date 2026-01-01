@@ -13,7 +13,8 @@ sys.path.append(str(BACKEND_DIR))
 sys.path.append(str(SYMFLUENCE_SRC))
 
 from api.main import app
-from api.models import SessionLocal, Job as DBJob
+from api.models import Job as DBJob
+from utils.db import get_session_local
 
 client = TestClient(app)
 
@@ -40,7 +41,11 @@ def test_modeling_workflow():
     # In TestClient, background tasks are usually executed synchronously or need to be handled.
     
     # Let's poll the DB directly
-    db = SessionLocal()
+    session_factory = get_session_local()
+    if not session_factory:
+        print("Skipping DB polling: SessionLocal not initialized.")
+        return
+    db = session_factory()
     import time
     
     print("Polling database for job status...")

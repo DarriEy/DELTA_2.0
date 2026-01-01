@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 
-const SummaryModal = ({ summary, onConfirm, onCancel }) => {
+const SummaryModal = ({ summary, onConfirm, onCancel, onClose }) => {
   const [editedSummary, setEditedSummary] = useState(summary);
+  const handleCancel = onCancel || onClose;
+  const handleConfirm = onConfirm || onClose;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
@@ -29,13 +31,13 @@ const SummaryModal = ({ summary, onConfirm, onCancel }) => {
         {/* Action Buttons */}
         <div className="flex justify-end gap-3">
             <button 
-                onClick={onCancel}
+                onClick={handleCancel}
                 className="px-5 py-2 rounded-lg text-sm font-medium text-white/70 hover:text-white hover:bg-white/10 transition-colors"
             >
                 Cancel
             </button>
             <button 
-                onClick={() => onConfirm(editedSummary)}
+                onClick={() => handleConfirm && handleConfirm(editedSummary)}
                 className="px-6 py-2 rounded-lg text-sm font-bold bg-gradient-to-r from-orange-500 to-red-600 text-white shadow-lg hover:shadow-orange-500/30 hover:scale-105 active:scale-95 transition-all"
             >
                 Save & End

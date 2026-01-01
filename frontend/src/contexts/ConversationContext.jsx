@@ -1,11 +1,12 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useReducer } from 'react';
 import { apiClient } from '../api/client';
+import { conversationReducer } from './conversationReducer';
 
 const ConversationContext = createContext();
 
 export const ConversationProvider = ({ children }) => {
   const [currentConversationId, setCurrentConversationId] = useState(null);
-  const [conversationHistory, setConversationHistory] = useState([]);
+  const [conversationHistory, dispatch] = useReducer(conversationReducer, []);
   const [activeMode, setActiveMode] = useState('general');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -16,11 +17,11 @@ export const ConversationProvider = ({ children }) => {
     console.log("DELTA: Creating conversation for mode:", mode);
     try {
       const data = await apiClient.post('/conversations/', { active_mode: mode, user_id: userId });
-      console.log("DELTA: Conversation established:", data.conversation_id);
-      setCurrentConversationId(data.conversation_id);
-      setConversationHistory([]);
+      console.log("DELTA: Conversation established:", data.id);
+      setCurrentConversationId(data.id);
+      dispatch({ type: "reset" });
       setActiveMode(mode);
-      return data.conversation_id;
+      return data.id;
     } catch (error) {
       console.error('DELTA: Failed to create conversation:', error);
       setError('Connection failed. Please check your network.');
@@ -31,7 +32,11 @@ export const ConversationProvider = ({ children }) => {
   }, []);
 
   const addMessage = useCallback((role, content) => {
-    setConversationHistory(prev => [...prev, { role, content }]);
+    dispatch({ type: "add", message: { role, content } });
+  }, []);
+
+  const setConversationHistory = useCallback((history) => {
+    dispatch({ type: "replace", history });
   }, []);
 
   const sendMessage = useCallback(async (text, onChunkReceived) => { // Changed back to async function, added onChunkReceived
@@ -50,18 +55,10 @@ export const ConversationProvider = ({ children }) => {
     
     try {
       let fullResponse = '';
-      // Create a placeholder for the assistant's message in the UI
-      setConversationHistory(prev => [...prev.filter(msg => msg.content !== ''), { role: 'assistant', content: '' }]);
-      
+      dispatch({ type: "start_assistant_message" });
+
       const updateMessage = (newContent) => {
-        setConversationHistory(prev => {
-          const newHistory = [...prev];
-          const lastAssistantMessageIndex = newHistory.findLastIndex(msg => msg.role === 'assistant');
-          if (lastAssistantMessageIndex !== -1) {
-            newHistory[lastAssistantMessageIndex].content = newContent;
-          }
-          return newHistory;
-        });
+        dispatch({ type: "update_last_assistant", content: newContent });
       };
 
       await apiClient.stream('/process_stream', { 

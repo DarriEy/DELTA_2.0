@@ -1,7 +1,14 @@
 # backend/schemas.py
-from pydantic import BaseModel, EmailStr, Field
-from typing import List, Optional
+from pydantic import BaseModel, EmailStr, Field, ConfigDict
+from typing import List, Optional, Any, Generic, TypeVar
 from datetime import datetime
+
+T = TypeVar("T")
+
+class APIResponse(BaseModel, Generic[T]):
+    status: str = "success"
+    data: Optional[T] = None
+    message: Optional[str] = None
 
 class UserBase(BaseModel):
     username: str
@@ -11,68 +18,60 @@ class UserCreate(UserBase):
     password: str
 
 class User(UserBase):
-    user_id: int
-    registration_date: datetime
+    id: int
+    created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class UserInput(BaseModel):
     user_input: str
 
 class ConversationBase(BaseModel):
     active_mode: str
-
-class ImagePrompt(BaseModel):
-    prompt: str 
-
-class ConversationCreate(ConversationBase):
     user_id: Optional[int] = None
 
-class Conversation(ConversationBase):
-    id: Optional[int] = None
-    conversation_id: Optional[int] = None
-    user_id: int
-    start_time: datetime
-
-    class Config:
-        from_attributes = True
-
-class MessageBase(BaseModel):
-    content: str
-    sender: str
-
-class MessageCreate(MessageBase):
-    message_index: int
-
-class Message(MessageBase):
-    message_id: int
-    conversation_id: int
-    timestamp: datetime
-
-    class Config:
-        from_attributes = True
-
-class ModelConfigBase(BaseModel):
-    config_name: str
-    model_name: str
-    config_data: dict
-    model_config = {'protected_namespaces': ()}
+class ConversationCreate(ConversationBase):
+    pass
 
 class ConversationUpdate(BaseModel):
     summary: Optional[str] = None
     active_mode: Optional[str] = None
+
+class Conversation(ConversationBase):
+    id: int
+    start_time: datetime
+    summary: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+class MessageBase(BaseModel):
+    content: str
+    sender: str
+    conversation_id: int
+    message_index: int
+
+class MessageCreate(MessageBase):
+    pass
+
+class Message(MessageBase):
+    id: int
+    timestamp: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+class ImagePrompt(BaseModel):
+    prompt: str 
+
+class ModelConfigBase(BaseModel):
+    name: str
+    parameters: dict
 
 class ModelConfigCreate(ModelConfigBase):
     pass
 
 class ModelConfig(ModelConfigBase):
     config_id: int
-    user_id: int
-    creation_time: datetime
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class ModelRunBase(BaseModel):
     status: str
@@ -85,8 +84,7 @@ class ModelRun(ModelRunBase):
     run_id: int
     start_time: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class EducationalProgressBase(BaseModel):
     topic_name: str
@@ -101,8 +99,7 @@ class EducationalProgress(EducationalProgressBase):
     user_id: int
     last_accessed: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class JobBase(BaseModel):
     type: str
@@ -122,8 +119,7 @@ class Job(JobBase):
     result: Optional[dict] = None
     created_at: datetime
     updated_at: datetime
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 # Consider moving this to a separate module or routes.py if it's only used there
 class RunConfluenceInput(BaseModel):

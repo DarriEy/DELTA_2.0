@@ -5,6 +5,11 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   base: '/DELTA_2.0/',
+  test: {
+    environment: "jsdom",
+    setupFiles: "./src/setupTests.js",
+    globals: true,
+  },
   server: {
     host: true, // Allow external access to the dev server
     port: 5173, // Specify the port you want Vite to use
