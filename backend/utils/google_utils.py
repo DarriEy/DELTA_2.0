@@ -55,13 +55,23 @@ def get_credentials():
             except Exception as e:
                 logger.error(f"Error loading service account file at {creds_path}: {e}")
         
-        # Fallback: check if it's relative to the backend directory if CWD is project root
-        alt_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), os.path.basename(creds_path))
-        if os.path.exists(alt_path):
-            try:
-                return service_account.Credentials.from_service_account_file(alt_path, scopes=scopes)
-            except Exception as e:
-                logger.error(f"Error loading service account file at {alt_path}: {e}")
+        # Check if it's just a filename and might be in the same dir as this script
+        # or in the backend root
+        filename = os.path.basename(creds_path)
+        search_paths = [
+            filename,
+            os.path.join(os.getcwd(), filename),
+            os.path.join(os.path.dirname(os.path.dirname(__file__)), filename),
+            "/app/" + filename
+        ]
+        
+        for p in search_paths:
+            if os.path.exists(p):
+                try:
+                    logger.info(f"Found credentials file at {p}")
+                    return service_account.Credentials.from_service_account_file(p, scopes=scopes)
+                except Exception as e:
+                    logger.error(f"Error loading service account file at {p}: {e}")
 
     
     # 3. Default
@@ -69,7 +79,10 @@ def get_credentials():
         credentials, project = google.auth.default(scopes=scopes)
         return credentials
     except Exception as e:
-        logger.error(f"Error getting default credentials: {e}")
+        # If we have a path set that didn't exist, we probably shouldn't try default 
+        # because it might be a broken local path that's making it fail.
+        if not creds_path:
+            logger.error(f"Error getting default credentials: {e}")
         return None
 
 def get_tts_client():

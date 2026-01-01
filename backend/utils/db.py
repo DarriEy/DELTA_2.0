@@ -21,10 +21,16 @@ def init_engine(echo: bool = False) -> Optional[Engine]:
     # Redact password for logging
     redacted_url = database_url
     if "@" in database_url and "://" in database_url:
-        prefix, rest = database_url.split("://", 1)
-        if "@" in rest:
-            auth, host = rest.split("@", 1)
-            redacted_url = f"{prefix}://***:***@{host}"
+        try:
+            from sqlalchemy.engine.url import make_url
+            url = make_url(database_url)
+            redacted_url = f"{url.drivername}://{url.username}:***@{url.host}{':' + str(url.port) if url.port else ''}/{url.database}"
+        except Exception:
+            # Fallback if make_url fails
+            prefix, rest = database_url.split("://", 1)
+            if "@" in rest:
+                auth, host = rest.split("@", 1)
+                redacted_url = f"{prefix}://***:***@{host}"
     
     logger.info("Initializing database engine with URL: %s", redacted_url)
     
@@ -38,7 +44,10 @@ def init_engine(echo: bool = False) -> Optional[Engine]:
         _SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=_engine)
         return _engine
     except Exception as exc:
-        logger.error("Failed to create engine for %s: %s", redacted_url, exc)
+        logger.error("Failed to create engine for %s. Error: %s", redacted_url, str(exc))
+        # If the URL parsing failed, it might be due to special characters in password
+        if "Could not parse SQLAlchemy URL" in str(exc):
+            logger.error("TIP: Ensure your database password does not contain special characters like '@', ':', or '/' without URL encoding.")
         _engine = None
         _SessionLocal = None
         return None

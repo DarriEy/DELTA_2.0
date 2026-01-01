@@ -24,20 +24,18 @@ def create_app() -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         log.info("DELTA Backend Starting...")
+        
+        # Load credentials early using centralized utility
+        from utils.google_utils import get_credentials
+        creds = get_credentials()
+        
         from .services.llm_service import get_llm_service
         get_llm_service().init_vertex()
 
-        creds_path = "/app/google-credentials.json"
-        if os.path.exists(creds_path):
-            os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = creds_path
-            log.info("Using Google credentials from %s", creds_path)
-        elif os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):
-            log.info(
-                "Using Google credentials from environment path: %s",
-                os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"),
-            )
+        if creds:
+            log.info("Google Cloud credentials loaded successfully.")
         else:
-            log.warning("GOOGLE_APPLICATION_CREDENTIALS not set. Google Cloud features will fail.")
+            log.warning("Google Cloud credentials NOT loaded. Cloud features will fail.")
 
         if session_local and engine:
             try:
