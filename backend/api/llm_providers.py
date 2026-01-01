@@ -58,21 +58,18 @@ def retry_async_generator(max_attempts=5, base_delay=2, backoff_factor=2):
             attempt = 0
             while attempt < max_attempts:
                 try:
-                    # Collect all chunks from the generator
-                    chunks = []
+                    # We attempt to iterate the generator. 
+                    # Note: If it fails halfway through, retrying will repeat earlier chunks.
+                    # However, 429s usually happen at the very beginning of the stream.
                     async for chunk in func(*args, **kwargs):
-                        chunks.append(chunk)
-                    
-                    # Define a nested async generator to yield the collected chunks
-                    async def chunk_generator():
-                        for c in chunks:
-                            yield c
-                    return chunk_generator()
+                        yield chunk
+                    return # Success
                 except Exception as e:
                     attempt += 1
                     err_msg = str(e)
                     if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg:
                         if attempt >= max_attempts:
+                            logger.error(f"Gemini Stream: Max retry attempts reached. Last error: {err_msg}")
                             raise e
                         
                         delay = base_delay * (backoff_factor ** (attempt - 1))
@@ -83,7 +80,7 @@ def retry_async_generator(max_attempts=5, base_delay=2, backoff_factor=2):
                                 delay = max(delay, float(match.group(1)) + 1.0)
                             except ValueError: pass
                             
-                        logger.warning(f"Gemini Stream rate limited. Retrying in {delay:.2f}s...")
+                        logger.warning(f"Gemini Stream rate limited (429). Retrying in {delay:.2f}s (Attempt {attempt}/{max_attempts})...")
                         await asyncio.sleep(delay)
                     else:
                         raise e

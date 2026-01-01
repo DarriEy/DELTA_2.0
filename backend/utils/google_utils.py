@@ -48,12 +48,18 @@ def get_credentials():
     # 2. File path
     creds_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
     if creds_path:
-        # Check absolute or relative to CWD
-        if os.path.exists(creds_path):
+        # Check if it's a local-only path (e.g. starting with /Users/ on a non-macOS system)
+        import platform
+        is_local_path = creds_path.startswith("/Users/") and platform.system() != "Darwin"
+        
+        if not is_local_path and os.path.exists(creds_path):
             try:
                 return service_account.Credentials.from_service_account_file(creds_path, scopes=scopes)
             except Exception as e:
                 logger.error(f"Error loading service account file at {creds_path}: {e}")
+        
+        if is_local_path:
+            logger.warning(f"Ignoring local-only credentials path: {creds_path}")
         
         # Check if it's just a filename and might be in the same dir as this script
         # or in the backend root
@@ -62,7 +68,9 @@ def get_credentials():
             filename,
             os.path.join(os.getcwd(), filename),
             os.path.join(os.path.dirname(os.path.dirname(__file__)), filename),
-            "/app/" + filename
+            os.path.join(os.path.dirname(__file__), filename),
+            "/app/" + filename,
+            "/etc/secrets/" + filename # Render secrets path
         ]
         
         for p in search_paths:

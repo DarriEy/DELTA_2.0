@@ -37,6 +37,7 @@ def init_engine(echo: bool = False) -> Optional[Engine]:
     
     try:
         if "postgresql" in database_url:
+            # Handle possible multiple @ in URL (sometimes in passwords)
             _engine = create_engine(
                 database_url, echo=echo, connect_args={"connect_timeout": 10}
             )
@@ -44,11 +45,17 @@ def init_engine(echo: bool = False) -> Optional[Engine]:
             _engine = create_engine(database_url, echo=echo)
         _SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=_engine)
         return _engine
-    except Exception as exc:
+    except (Exception, ValueError) as exc:
         logger.error("Failed to create engine for %s. Error: %s", redacted_url, str(exc))
+        
+        # Specific check for common Neon/Render issues
+        if "@" not in database_url or "://" not in database_url:
+            logger.error("DATABASE_URL appears to be malformed or missing credentials.")
+        
         # If the URL parsing failed, it might be due to special characters in password
-        if "Could not parse SQLAlchemy URL" in str(exc):
+        if "Could not parse SQLAlchemy URL" in str(exc) or "NoneType" in str(exc):
             logger.error("TIP: Ensure your database password does not contain special characters like '@', ':', or '/' without URL encoding.")
+        
         _engine = None
         _SessionLocal = None
         return None
