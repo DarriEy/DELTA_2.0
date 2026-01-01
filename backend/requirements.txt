@@ -1,42 +1,56 @@
+# Core FastAPI dependencies
 fastapi
 uvicorn
 pydantic==2.*
+
+# Database
 SQLAlchemy
 alembic
-python-dotenv
-bcrypt
-httpx
 psycopg2-binary
-PyYAML
+asyncpg
+
+# Authentication & Security
+bcrypt
+python-dotenv
+
+# HTTP & API
+httpx
 requests
 email-validator==2.1.0.post1
-Pillow
+
+# Google Cloud Services
 google-genai
 google-cloud-aiplatform
-openai
-requests
-bs4
-asyncpg
-google-genai
-google-auth
 google-cloud-storage
 google-cloud-texttospeech>=2.12.0
-google-api-core>=2.11.0
 google-cloud-vision
+google-api-core>=2.11.0
+google-auth
 grpcio>=1.51.0
+
+# AI/ML
+openai
+
+# Data Processing
 pandas
 numpy
 matplotlib
 scipy
 xarray
 netCDF4
+h5netcdf
+cftime
+numexpr
+
+# Geospatial
 geopandas
 rasterio
 pyproj
 shapely
 fiona
-pyyaml
+
+# Utilities
+PyYAML
+Pillow
+bs4
 tqdm
-h5netcdf
-cftime
-numexpr

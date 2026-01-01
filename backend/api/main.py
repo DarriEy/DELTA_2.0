@@ -98,12 +98,16 @@ def create_app() -> FastAPI:
     app.include_router(chat.router, prefix="/api", tags=["chat"])
     app.include_router(jobs.router, prefix="/api", tags=["jobs"])
     app.include_router(users.router, prefix="/api", tags=["users"])
+    
+    # Add health check router
+    from .routers.health import router as health_router
+    app.include_router(health_router, prefix="/api", tags=["health"])
 
     @app.get("/api/health/google")
     async def google_health_check():
         """Checks the status of Google service integration."""
-        from .services.health_service import check_google_health
-        return await check_google_health()
+        from .services.health_service import get_health_service
+        return await get_health_service().check_google_health()
 
     @app.get("/api/debug/config")
     async def debug_config():

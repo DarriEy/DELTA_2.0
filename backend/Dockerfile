@@ -1,56 +1,46 @@
-# Use the official Python image as the base image
-FROM python:3.12-slim
+# Multi-stage build for optimized production image
+FROM python:3.12-slim as builder
 
-# Install system dependencies for scientific libraries
+# Install build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libgdal-dev \
     libproj-dev \
     libgeos-dev \
-    gdal-bin \
-    netcdf-bin \
-    libnetcdf-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Set the working directory inside the container
-WORKDIR /app
+# Create virtual environment
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
 
-# Copy the requirements file to the working directory
-COPY requirements.txt /app/
-
-# Install the required packages
+# Copy and install requirements
+COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install psycopg2-binary explicitly
-RUN pip install --no-cache-dir psycopg2-binary
+# Production stage
+FROM python:3.12-slim
 
-# Copy the api directory
-COPY api /app/api
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgdal32 \
+    libproj25 \
+    libgeos-c1v5 \
+    netcdf-bin \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy alembic configuration and migrations
-COPY alembic.ini /app/alembic.ini
-COPY alembic /app/alembic
+# Copy virtual environment from builder
+COPY --from=builder /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
 
-# Copy utils
-COPY utils /app/utils
+WORKDIR /app
 
-# Copy modules
-COPY modules /app/modules
+# Copy application code
+COPY backend/ .
 
-# Expose the port that the application will run on
+# Create non-root user
+RUN useradd --create-home --shell /bin/bash app && chown -R app:app /app
+USER app
+
 EXPOSE 8000
 
-# Copy the wait-for-it.sh script into the container
-COPY wait-for-it.sh /app/wait-for-it.sh
-
-# Give execution permissions to the wait-for-it.sh script
-RUN chmod +x /app/wait-for-it.sh
-
-# Copy the start.sh script into the container
-COPY start.sh /app/start.sh
-
-# Give execution permissions to the start.sh script
-RUN chmod +x /app/start.sh
-
-# Set the command to run when the container starts
-CMD ["/app/start.sh"]
+CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from utils.db import get_db
 from ..models import Conversation as DBConversation, Message as DBMessage
-from ..services import user_service
+from ..services.user_service import get_user_service
 from ..schemas import (
     UserCreate, User, 
     ConversationCreate, Conversation, ConversationUpdate,
@@ -14,12 +14,12 @@ router = APIRouter()
 
 @router.post("/users/", response_model=APIResponse[User])
 def create_user(user: UserCreate, db: Session = Depends(get_db)):
-    existing_user = user_service.get_user_by_email(db, user.email)
+    existing_user = get_user_service().get_user_by_email(db, user.email)
     if existing_user:
         raise HTTPException(status_code=409, detail="Email already exists")
 
     try:
-        new_user = user_service.create_user(db, user.username, user.email, user.password)
+        new_user = get_user_service().create_user(db, user.username, user.email, user.password)
         return APIResponse(data=new_user)
     except Exception as e:
         db.rollback()
@@ -30,7 +30,7 @@ def create_conversation(
     conversation: ConversationCreate, db: Session = Depends(get_db)
 ):
     try:
-        db_conversation = user_service.create_conversation(db, conversation.dict())
+        db_conversation = get_user_service().create_conversation(db, conversation.dict())
         return APIResponse(data=db_conversation)
     except Exception as e:
         db.rollback()

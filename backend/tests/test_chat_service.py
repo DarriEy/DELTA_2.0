@@ -2,7 +2,7 @@ import pytest
 pytest.importorskip("sqlalchemy")
 
 from unittest.mock import MagicMock, AsyncMock, patch
-from backend.api.services import chat_service
+from backend.api.services.chat_service import get_chat_service
 from sqlalchemy.orm import Session
 
 async def _async_stream(chunks):
@@ -16,7 +16,7 @@ async def test_process_user_input_no_conversation():
     db.begin.return_value.__exit__.return_value = None
     db.query.return_value.filter.return_value.first.return_value = None
 
-    llm_response, error = await chat_service.process_user_input(db, "Hi", 123)
+    llm_response, error = await get_chat_service().process_user_input(db, "Hi", 123)
 
     assert llm_response is None
     assert error == "Conversation not found"
@@ -28,7 +28,7 @@ async def test_get_conversation_summary_empty():
     db.begin.return_value.__exit__.return_value = None
     db.query.return_value.filter.return_value.order_by.return_value.all.return_value = []
 
-    summary = await chat_service.get_conversation_summary(db, 123)
+    summary = await get_chat_service().get_conversation_summary(db, 123)
 
     assert summary is None
 
@@ -49,10 +49,12 @@ async def test_process_user_input_tool_call_roundtrip():
     llm_service_mock = MagicMock()
     llm_service_mock.generate_response = AsyncMock(side_effect=[tool_call_response, "Done"])
 
+    chat_service = get_chat_service()
+
     with patch.object(chat_service, "get_recent_history", return_value=[]), \
          patch.object(chat_service, "create_message") as create_message_mock, \
          patch("backend.api.services.chat_service.get_llm_service", return_value=llm_service_mock), \
-         patch("backend.api.services.chat_service.run_tools", return_value=[{"name": "run_model", "result": "ok"}]):
+         patch("backend.api.services.chat_service.run_tools", return_value=[{"name": "run_model", "result": "ok"}]) :
         response, error = await chat_service.process_user_input(
             db, "Run model", 101, background_tasks=MagicMock()
         )
@@ -73,6 +75,8 @@ async def test_process_user_input_stream_persists_messages():
         ["chunk-a", "chunk-b"]
     )
 
+    chat_service = get_chat_service()
+
     with patch.object(chat_service, "get_recent_history", return_value=[]), \
          patch("backend.api.services.chat_service.get_llm_service", return_value=llm_service_mock), \
          patch.object(chat_service, "create_message") as create_message_mock:
@@ -80,7 +84,7 @@ async def test_process_user_input_stream_persists_messages():
         async for chunk in chat_service.process_user_input_stream(db, "Hi", 101):
             chunks.append(chunk)
 
-    assert "".join(chunks) == "chunk-achunk-b"
+    assert "".join(chunks) == "data: chunk-a\n\ndata: chunk-b\n\n"
     assert create_message_mock.call_count == 2
     assert db.commit.call_count == 2
 
@@ -94,6 +98,8 @@ async def test_process_user_input_stream_fails_on_user_save():
     llm_service_mock = MagicMock()
     llm_service_mock.generate_stream = lambda *_args, **_kwargs: _async_stream(["chunk"])
 
+    chat_service = get_chat_service()
+
     def raise_on_first(*_args, **_kwargs):
         raise RuntimeError("db fail")
 
@@ -104,4 +110,4 @@ async def test_process_user_input_stream_fails_on_user_save():
         async for chunk in chat_service.process_user_input_stream(db, "Hi", 101):
             chunks.append(chunk)
 
-    assert chunks == ["Error: Failed to save user message."]
+    assert chunks == ["data: Error: Failed to save user message.\n\n"]

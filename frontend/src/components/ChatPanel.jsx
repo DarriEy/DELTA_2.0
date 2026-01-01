@@ -1,9 +1,25 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, memo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import { useConversation } from '../contexts/ConversationContext';
 import { useSpeech } from '../contexts/SpeechContext';
+
+const ChatMessage = memo(({ msg }) => (
+  <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+    <div className={`max-w-[90%] text-sm leading-relaxed
+      ${msg.role === 'user' ? 'text-blue-400/80 font-medium' : 'text-white/70'}`}
+    >
+      <ReactMarkdown 
+        remarkPlugins={[remarkMath]} 
+        rehypePlugins={[rehypeKatex]}
+        className="markdown-content"
+      >
+        {msg.content}
+      </ReactMarkdown>
+    </div>
+  </div>
+));
 
 const ChatPanel = () => {
   const { conversationHistory } = useConversation();
@@ -29,19 +45,7 @@ const ChatPanel = () => {
           </div>
         ) : (
           conversationHistory.map((msg, idx) => (
-            <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[90%] text-sm leading-relaxed
-                ${msg.role === 'user' ? 'text-blue-400/80 font-medium' : 'text-white/70'}`}
-              >
-                <ReactMarkdown 
-                  remarkPlugins={[remarkMath]} 
-                  rehypePlugins={[rehypeKatex]}
-                  className="markdown-content"
-                >
-                  {msg.content}
-                </ReactMarkdown>
-              </div>
-            </div>
+            <ChatMessage key={idx} msg={msg} />
           ))
         )}
       </div>
@@ -54,5 +58,7 @@ const ChatPanel = () => {
     </div>
   );
 };
+
+export default ChatPanel;
 
 export default ChatPanel;

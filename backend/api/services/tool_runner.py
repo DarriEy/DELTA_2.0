@@ -7,7 +7,7 @@ except ImportError:  # pragma: no cover - optional dependency for tests
 from sqlalchemy.orm import Session
 
 from utils.db import get_session_local
-from . import job_service
+from .job_service import get_job_service
 
 
 def run_tools(
@@ -36,7 +36,7 @@ def run_tools(
                 continue
 
             try:
-                job = job_service.create_modeling_job(
+                job = get_job_service().create_modeling_job(
                     db,
                     {"model": args.get("model"), "job_type": "SIMULATION"},
                     background_tasks,

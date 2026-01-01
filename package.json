@@ -2,20 +2,26 @@
   "name": "delta-monorepo",
   "version": "2.0.0",
   "private": true,
-  "description": "Integrated Hydrological Intelligence Monorepo",
+  "description": "DELTA: AI-Assisted Hydrological Research Assistant",
   "workspaces": [
-    "frontend"
+    "frontend",
+    "backend"
   ],
   "scripts": {
-    "frontend:dev": "npm run dev --workspace=frontend",
-    "frontend:build": "npm run build --workspace=frontend",
-    "backend:dev": "cd backend && uvicorn api.main:app --reload",
-    "backend:test": "cd backend && pytest",
-    "test:all": "npm run backend:test && npm run frontend:test",
-    "deploy:frontend": "cd frontend && npm run build && npm run deploy",
-    "deploy:backend": "./deploy_backend.sh"
+    "dev": "docker-compose up --build",
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "dev:backend": "cd backend && uvicorn api.main:app --reload --host 0.0.0.0",
+    "build": "docker-compose build",
+    "test": "npm run test:backend && npm run test:frontend",
+    "test:backend": "cd backend && pytest",
+    "test:frontend": "npm run test --workspace=frontend",
+    "clean": "docker-compose down -v && docker system prune -f"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=18.0.0",
+    "python": ">=3.9.0"
+  },
+  "devDependencies": {
+    "concurrently": "^7.6.0"
   }
 }

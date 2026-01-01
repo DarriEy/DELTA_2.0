@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useSpeechQueue } from "./useSpeechQueue";
+import { useAvatarAnimations } from "./useAvatarAnimations";
 
 export const useSpeechInteraction = ({
   sendMessage,
@@ -7,92 +9,53 @@ export const useSpeechInteraction = ({
   isListening,
   isTalking,
 }) => {
-  const [isNodding, setIsNodding] = useState(false);
-  const [isShaking, setIsShaking] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [introductionSpoken, setIntroductionSpoken] = useState(false);
-  const [speechQueue, setSpeechQueue] = useState([]);
-  const [isSpeakingChunk, setIsSpeakingChunk] = useState(false);
+  
+  const {
+    speechQueue,
+    isSpeakingChunk,
+    processTextChunk,
+    flushBuffer,
+    clearQueue
+  } = useSpeechQueue(speak);
 
-  const bufferedText = useRef("");
-  const speechQueueRef = useRef([]);
-  const isSpeakingChunkRef = useRef(false);
+  const {
+    isNodding,
+    isShaking,
+    triggerShake
+  } = useAvatarAnimations(isTalking);
+
+  // Refs for async callbacks
   const isListeningRef = useRef(false);
-  const sentenceEndings = /[.!?。？！]/;
-
-  useEffect(() => {
-    speechQueueRef.current = speechQueue;
-  }, [speechQueue]);
-
-  useEffect(() => {
-    isSpeakingChunkRef.current = isSpeakingChunk;
-  }, [isSpeakingChunk]);
+  const shouldRestartListening = useRef(false);
 
   useEffect(() => {
     isListeningRef.current = isListening;
   }, [isListening]);
 
-  useEffect(() => {
-    setIsNodding(isTalking);
-  }, [isTalking]);
-
-  const triggerShake = useCallback(() => {
-    setIsShaking(true);
-    setTimeout(() => setIsShaking(false), 1000);
-  }, []);
+  const isBusy = speechQueue.length > 0 || isSpeakingChunk;
 
   useEffect(() => {
-    if (speechQueue.length > 0 && !isSpeakingChunk) {
-      const nextSentence = speechQueue[0];
-      setIsSpeakingChunk(true);
-      speak(nextSentence).then(() => {
-        setSpeechQueue((prev) => prev.slice(1));
-        setIsSpeakingChunk(false);
-      });
+    if (!isBusy && shouldRestartListening.current && !isListeningRef.current) {
+      console.log("DELTA: Speech queue empty, starting to listen again...");
+      startListening(handleSpeechRecognitionResult);
+      shouldRestartListening.current = false;
     }
-  }, [speechQueue, isSpeakingChunk, speak]);
-
-  const processTextChunk = useCallback((chunk) => {
-    bufferedText.current += chunk;
-    let match;
-    while ((match = bufferedText.current.match(sentenceEndings))) {
-      const sentence = bufferedText.current
-        .substring(0, match.index + 1)
-        .trim();
-      if (sentence) {
-        setSpeechQueue((prev) => [...prev, sentence]);
-      }
-      bufferedText.current = bufferedText.current.substring(match.index + 1);
-    }
-  }, []);
+  }, [isBusy, startListening, handleSpeechRecognitionResult]);
 
   const handleSpeechRecognitionResult = useCallback(
     async (text) => {
       if (!text) return;
       setIsProcessing(true);
-      bufferedText.current = "";
+      clearQueue();
 
       try {
         await sendMessage(text, processTextChunk);
-
-        if (bufferedText.current.trim()) {
-          setSpeechQueue((prev) => [...prev, bufferedText.current.trim()]);
-          bufferedText.current = "";
-        }
-
-        const checkAndStartListening = () => {
-          if (
-            speechQueueRef.current.length === 0 &&
-            !isSpeakingChunkRef.current &&
-            !isListeningRef.current
-          ) {
-            console.log("DELTA: Speech queue empty, starting to listen again...");
-            startListening(handleSpeechRecognitionResult);
-          } else {
-            setTimeout(checkAndStartListening, 500);
-          }
-        };
-        checkAndStartListening();
+        flushBuffer();
+        
+        // Signal that we want to restart listening once speech finishes
+        shouldRestartListening.current = true;
       } catch (error) {
         console.error(error);
         triggerShake();
@@ -101,7 +64,7 @@ export const useSpeechInteraction = ({
         setIsProcessing(false);
       }
     },
-    [sendMessage, processTextChunk, startListening, triggerShake]
+    [sendMessage, processTextChunk, triggerShake, flushBuffer, clearQueue]
   );
 
   const handleAvatarClick = useCallback(async () => {
