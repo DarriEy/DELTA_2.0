@@ -83,7 +83,7 @@ class ChatService:
 
     async def process_user_input(
         self,
-        db: Session, 
+        db: Optional[Session], 
         user_input: str, 
         conversation_id: int, 
         background_tasks: Optional[BackgroundTasks] = None
@@ -129,15 +129,17 @@ class ChatService:
                 conversation_id,
                 last_message_index + 2,
             )
-            db.commit()
+            if db:
+                db.commit()
         except Exception as exc:
             log.error("Failed to persist conversation messages: %s", exc)
-            db.rollback()
+            if db:
+                db.rollback()
             return None, "Failed to save conversation messages."
 
         return final_text_response, None
 
-    async def process_user_input_stream(self, db: Session, user_input: str, conversation_id: int):
+    async def process_user_input_stream(self, db: Optional[Session], user_input: str, conversation_id: int):
         log.info("Starting stream for conversation %s", conversation_id)
         _, history, last_message_index, error = await self._prepare_conversation_turn(
             db, user_input, conversation_id
@@ -149,10 +151,12 @@ class ChatService:
 
         try:
             self.create_message(db, user_input, "user", conversation_id, last_message_index + 1)
-            db.commit()
+            if db:
+                db.commit()
         except Exception as exc:
             log.error("Failed to persist user message: %s", exc)
-            db.rollback()
+            if db:
+                db.rollback()
             yield "data: Error: Failed to save user message.\n\n"
             return
 
@@ -177,13 +181,18 @@ class ChatService:
         log.info("Stream finished, persisting response...")
         try:
             self.create_message(db, full_response, "assistant", conversation_id, last_message_index + 2)
-            db.commit()
+            if db:
+                db.commit()
         except Exception as exc:
             log.error("Failed to persist assistant message: %s", exc)
-            db.rollback()
+            if db:
+                db.rollback()
             yield "Error: Failed to save assistant message."
 
-    async def get_conversation_summary(self, db: Session, conversation_id: int) -> Optional[str]:
+    async def get_conversation_summary(self, db: Optional[Session], conversation_id: int) -> Optional[str]:
+        if not db:
+            return "Summary unavailable in stateless mode."
+            
         messages = (
             db.query(DBMessage)
             .filter(DBMessage.conversation_id == conversation_id)

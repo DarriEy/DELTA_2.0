@@ -6,7 +6,7 @@ from ..services.media_service import MediaService, get_media_service
 from ..schemas import ImagePrompt, APIResponse, ChatRequest, LearnRequest
 from ..services.llm_service import get_llm_service
 import logging
-from typing import Dict
+from typing import Dict, Optional
 
 from fastapi.responses import StreamingResponse
 

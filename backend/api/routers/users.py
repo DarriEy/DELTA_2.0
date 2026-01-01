@@ -10,7 +10,7 @@ from ..schemas import (
     ConversationCreate, Conversation, ConversationUpdate,
     MessageCreate, Message, APIResponse
 )
-from typing import List
+from typing import List, Optional
 
 router = APIRouter()
 

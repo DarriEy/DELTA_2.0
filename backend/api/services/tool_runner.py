@@ -11,7 +11,7 @@ from .job_service import get_job_service
 
 
 def run_tools(
-    db: Session,
+    db: Optional[Session],
     background_tasks: Optional[BackgroundTasks],
     function_calls: List[Dict[str, Any]],
 ) -> List[Dict[str, str]]:
@@ -22,6 +22,12 @@ def run_tools(
         args = call.get("args", {}) or {}
 
         if name == "run_model":
+            if not db:
+                results.append(
+                    {"name": name, "result": "Database required for modeling jobs. Please try again when the system is fully online."}
+                )
+                continue
+
             if not background_tasks:
                 results.append(
                     {"name": name, "result": "Background tasks not available to start job."}

@@ -1,6 +1,9 @@
 from datetime import datetime, timedelta
 from typing import Optional, Any, Union
+import logging
 from jose import JWTError, jwt
+
+logger = logging.getLogger(__name__)
 from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
