@@ -53,7 +53,8 @@ def create_user(
         new_user = user_service.create_user(db, user.username, user.email, user.password)
         return APIResponse(data=new_user)
     except Exception as e:
-        db.rollback()
+        if db:
+            db.rollback()
         raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
 
 @router.post("/conversations/", response_model=APIResponse[Conversation])
@@ -69,7 +70,8 @@ def create_conversation(
         db_conversation = user_service.create_conversation(db, conv_dict)
         return APIResponse(data=db_conversation)
     except Exception as e:
-        db.rollback()
+        if db:
+            db.rollback()
         raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
 
 @router.get("/conversations/", response_model=APIResponse[List[Conversation]])
@@ -112,7 +114,8 @@ def create_message(
         db_message = user_service.create_message(db, message.dict())
         return APIResponse(data=db_message)
     except Exception as e:
-        db.rollback()
+        if db:
+            db.rollback()
         raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
 
 @router.put("/conversations/{conversation_id}", response_model=APIResponse[Conversation])
@@ -133,5 +136,6 @@ def update_conversation(
         conversation = user_service.update_conversation(db, conversation_id, update_data)
         return APIResponse(data=conversation)
     except Exception as e:
-        db.rollback()
+        if db:
+            db.rollback()
         raise HTTPException(status_code=500, detail=str(e))

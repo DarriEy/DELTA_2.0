@@ -17,6 +17,17 @@ def init_engine(echo: bool = False) -> Optional[Engine]:
     """Initialize the SQLAlchemy engine and session factory."""
     global _engine, _SessionLocal
     database_url = get_database_url()
+    
+    # Redact password for logging
+    redacted_url = database_url
+    if "@" in database_url and "://" in database_url:
+        prefix, rest = database_url.split("://", 1)
+        if "@" in rest:
+            auth, host = rest.split("@", 1)
+            redacted_url = f"{prefix}://***:***@{host}"
+    
+    logger.info("Initializing database engine with URL: %s", redacted_url)
+    
     try:
         if "postgresql" in database_url:
             _engine = create_engine(
@@ -27,7 +38,7 @@ def init_engine(echo: bool = False) -> Optional[Engine]:
         _SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=_engine)
         return _engine
     except Exception as exc:
-        logger.error("Failed to create engine: %s", exc)
+        logger.error("Failed to create engine for %s: %s", redacted_url, exc)
         _engine = None
         _SessionLocal = None
         return None
@@ -45,11 +56,12 @@ def get_session_local() -> Optional[sessionmaker]:
     return _SessionLocal
 
 
-def get_db() -> Generator[Optional[Session], None, None]:
+def get_db() -> Generator[Session, None, None]:
     session_factory = get_session_local()
     if not session_factory:
-        yield None
-        return
+        from fastapi import HTTPException
+        raise HTTPException(status_code=503, detail="Database connection unavailable")
+        
     db = session_factory()
     try:
         yield db
