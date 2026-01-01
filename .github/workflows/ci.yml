@@ -14,16 +14,14 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.12'
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libgdal-dev libproj-dev libgeos-dev gdal-bin libnetcdf-dev libpq-dev python3-dev libatlas-base-dev
+        python-version: '3.11'
+        cache: pip
+        cache-dependency-path: backend/requirements-core.txt
     - name: Install dependencies
       run: |
         cd backend
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
+        pip install -r requirements-core.txt
         pip install pytest pytest-asyncio httpx
     - name: Run tests
       env:
@@ -41,6 +39,8 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '20'
+        cache: npm
+        cache-dependency-path: frontend/package-lock.json
     - name: Install and build frontend
       run: |
         cd frontend
