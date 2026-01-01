@@ -11,6 +11,7 @@ asyncpg
 
 # Authentication & Security
 bcrypt
+python-jose[cryptography]
 python-dotenv
 
 # HTTP & API

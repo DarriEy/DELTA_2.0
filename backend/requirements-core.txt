@@ -3,8 +3,9 @@ uvicorn
 pydantic==2.*
 SQLAlchemy
 alembic
-python-dotenv
 bcrypt
+python-jose[cryptography]
+python-dotenv
 httpx
 psycopg2-binary
 PyYAML
