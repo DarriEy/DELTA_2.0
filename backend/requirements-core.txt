@@ -6,6 +6,7 @@ alembic
 bcrypt
 python-jose[cryptography]
 passlib[recommended]
+python-multipart
 python-dotenv
 httpx
 psycopg2-binary

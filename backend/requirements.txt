@@ -13,6 +13,7 @@ asyncpg
 bcrypt
 python-jose[cryptography]
 passlib[recommended]
+python-multipart
 python-dotenv
 
 # HTTP & API
