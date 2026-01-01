@@ -16,10 +16,11 @@ _SessionLocal: Optional[sessionmaker] = None
 def init_engine(echo: bool = False) -> Optional[Engine]:
     """Initialize the SQLAlchemy engine and session factory."""
     global _engine, _SessionLocal
-    database_url = get_database_url()
+    database_url = (get_database_url() or "").strip()
     
-    # Redact password for logging
-    redacted_url = database_url
+    if not database_url:
+        logger.warning("No database URL provided.")
+        return None
     if "@" in database_url and "://" in database_url:
         try:
             from sqlalchemy.engine.url import make_url
