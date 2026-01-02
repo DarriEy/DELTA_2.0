@@ -172,7 +172,9 @@ class ChatService:
                     # Better to escape newlines or send as multiple data lines.
                     lines = chunk.split('\n')
                     for i, line in enumerate(lines):
-                        yield f"data: {line}{'\\n' if i < len(lines) - 1 else ''}\n\n"
+                        # Move newline marker to a variable to avoid backslash in f-string expression
+                        nl = '\\n' if i < len(lines) - 1 else ''
+                        yield f"data: {line}{nl}\n\n"
         except Exception as e:
             log.error("LLM Stream Error: %s", e)
             yield f"data: Error: LLM stream failed\n\n"
