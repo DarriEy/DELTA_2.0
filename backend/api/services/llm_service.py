@@ -14,7 +14,6 @@ from utils.config import get_settings
 from utils.google_utils import get_credentials
 from utils.prompts import DELTA_SYSTEM_PROMPT, EDUCATIONAL_GUIDE_PROMPT
 from ..llm_providers import get_llm_provider
-from ..tools_definition import get_tools_config
 
 logger = logging.getLogger(__name__)
 

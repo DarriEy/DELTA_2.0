@@ -1,15 +1,6 @@
-from sqlalchemy.orm import Session
-from sqlalchemy import func
-from ..models import Message as DBMessage, Conversation as DBConversation
-from .llm_service import get_llm_service
 import logging
 from typing import List, Dict, Any, Union, Optional, Tuple
-try:
-    from fastapi import BackgroundTasks
-except ImportError:
-    class BackgroundTasks:
-        pass
-from .tool_runner import run_tools
+from .llm_service import get_llm_service
 
 log = logging.getLogger(__name__)
 
@@ -51,15 +42,6 @@ class ChatService:
 
     async def get_conversation_summary(self, db: Optional[Any], conversation_id: int) -> Optional[str]:
         return "Stateless summary unavailable."
-
-        if not messages:
-            return None
-
-        formatted_messages = [
-            {"sender": msg.sender, "content": msg.content} for msg in messages
-        ]
-
-        return await self.llm_service.generate_summary_from_messages(formatted_messages)
 
 _SERVICE: Optional[ChatService] = None
 

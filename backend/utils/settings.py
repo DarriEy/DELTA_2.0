@@ -34,17 +34,3 @@ def reset_environment_for_tests() -> None:
 def get_env(key: str, default: Optional[str] = None) -> Optional[str]:
     load_environment()
     return os.environ.get(key, default)
-
-
-def get_database_url() -> str:
-    raw_db_url = get_env("DATABASE_URL")
-    if not raw_db_url:
-        logger.warning("DATABASE_URL not set, falling back to SQLite")
-        return "sqlite:///./fallback.db"
-    
-    raw_db_url = raw_db_url.strip()
-    
-    # Render and other providers often use postgres://, but SQLAlchemy requires postgresql://
-    if raw_db_url.startswith("postgres://"):
-        return raw_db_url.replace("postgres://", "postgresql://", 1)
-    return raw_db_url
