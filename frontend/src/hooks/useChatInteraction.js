@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { useAvatarAnimations } from "./useAvatarAnimations";
 
-export const useSpeechInteraction = ({
+export const useChatInteraction = ({
   sendMessage,
   addLocalAssistantMessage,
 }) => {

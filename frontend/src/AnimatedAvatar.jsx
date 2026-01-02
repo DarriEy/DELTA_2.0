@@ -4,7 +4,7 @@ import { useBackgrounds } from "./hooks/useBackgrounds";
 import SummaryModal from './components/Modals/SummaryModal';
 import dropletAvatar from './assets/Droplet_avatar.png';
 import { useInitialization } from "./hooks/useInitialization";
-import { useSpeechInteraction } from "./hooks/useSpeechInteraction";
+import { useChatInteraction } from "./hooks/useChatInteraction";
 import { useModeContent } from "./hooks/useModeContent";
 import { useSummary } from "./hooks/useSummary";
 import { useModelingJob } from "./hooks/useModelingJob";
@@ -51,7 +51,7 @@ const AnimatedAvatar = () => {
     setIsProcessing,
     handleAvatarClick,
     triggerShake,
-  } = useSpeechInteraction({
+  } = useChatInteraction({
     sendMessage,
     addLocalAssistantMessage,
   });

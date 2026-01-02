@@ -32,10 +32,11 @@ const ChatPanel = ({ isActive, setIsProcessing }) => {
 
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTo({
+      const scrollOptions = {
         top: scrollRef.current.scrollHeight,
-        behavior: 'smooth'
-      });
+        behavior: conversationHistory.length <= 1 ? 'auto' : 'smooth'
+      };
+      scrollRef.current.scrollTo(scrollOptions);
     }
   }, [conversationHistory]);
 
@@ -48,6 +49,7 @@ const ChatPanel = ({ isActive, setIsProcessing }) => {
     
     try {
       if (setIsProcessing) setIsProcessing(true);
+      // sendMessage will trigger the stream which updates history
       await sendMessage(text);
     } catch (err) {
       console.error("Failed to send message:", err);

@@ -14,7 +14,6 @@ async def debug_config():
     return {
         "PROJECT_ID": settings.project_id,
         "LOCATION": settings.location,
-        "GOOGLE_APPLICATION_CREDENTIALS": os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"),
         "GOOGLE_API_KEY_SET": bool(settings.google_api_key),
-        "DATABASE_URL_SET": bool(os.environ.get("DATABASE_URL")),
+        "MODE": "stateless"
     }
