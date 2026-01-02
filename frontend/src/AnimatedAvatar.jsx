@@ -49,6 +49,7 @@ const AnimatedAvatar = () => {
     isNodding,
     isShaking,
     isProcessing,
+    isChatActive,
     setIsProcessing,
     handleAvatarClick,
     triggerShake,
@@ -116,7 +117,7 @@ const AnimatedAvatar = () => {
           <div className="grid grid-cols-1 gap-8 h-full py-12">
             
             {/* Upper: Chat Stream */}
-            <ChatPanel />
+            <ChatPanel isActive={isChatActive} />
 
             {/* Lower: Dynamic Workspace */}
             <DynamicWorkspace 

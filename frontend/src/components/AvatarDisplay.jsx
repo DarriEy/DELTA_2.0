@@ -20,27 +20,27 @@ const AvatarDisplay = ({
         className={`
           w-64 h-64 md:w-72 md:h-72 rounded-full cursor-pointer relative
           transition-all duration-1000 ease-in-out
-          ${isTalking ? 'scale-105' : 'hover:scale-102'}
-          ${isNodding ? 'nod-animation' : ''}
+          ${isTalking || isProcessing ? 'scale-105' : 'hover:scale-102'}
+          ${isNodding || isProcessing ? 'nod-animation' : ''}
           ${isShaking ? 'shake-animation' : ''}
           ${isListening ? 'listening-animation' : ''}
         `}
       >
         {/* Subtle Ambient Glow */}
-        <div className={`absolute inset-0 rounded-full bg-blue-500/5 blur-3xl transition-all duration-1000 ${isTalking ? 'opacity-100 scale-110' : 'opacity-0'}`}></div>
+        <div className={`absolute inset-0 rounded-full bg-blue-500/5 blur-3xl transition-all duration-1000 ${isTalking || isProcessing ? 'opacity-100 scale-110' : 'opacity-0'}`}></div>
         
         {/* Simple Avatar Container */}
         <div className={`
           absolute inset-0 rounded-full overflow-hidden
           border transition-colors duration-1000
-          ${isTalking ? 'border-blue-500/40' : 'border-white/[0.05]'}
+          ${isTalking || isProcessing ? 'border-blue-500/40' : 'border-white/[0.05]'}
           ${isListening ? 'border-red-500/40' : ''}
         `}>
           <img 
             src={dropletAvatar} 
             alt="Delta" 
             className={`w-full h-full object-cover transition-all duration-1000 opacity-60
-              ${isTalking ? 'opacity-100 brightness-110' : ''}
+              ${isTalking || isProcessing ? 'opacity-100 brightness-110' : ''}
               ${isListening ? 'opacity-100 grayscale-0' : ''}
             `} 
           />

@@ -12,6 +12,7 @@ export const useSpeechInteraction = ({
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [introductionSpoken, setIntroductionSpoken] = useState(false);
+  const [isChatActive, setIsChatActive] = useState(false);
   
   const {
     speechQueue,
@@ -75,6 +76,8 @@ export const useSpeechInteraction = ({
       isTalking,
     });
 
+    setIsChatActive(true);
+
     if (!introductionSpoken) {
       const greeting =
         "Hi I'm Delta, your personal hydrological research assistant. How should we save the world today?";
@@ -119,6 +122,7 @@ export const useSpeechInteraction = ({
     isNodding,
     isShaking,
     isProcessing,
+    isChatActive,
     setIsProcessing,
     handleAvatarClick,
     triggerShake,
