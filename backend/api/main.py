@@ -5,9 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import logging
 from contextlib import asynccontextmanager
 
-from .models import Base
 from .routers import chat, jobs, users, health, system
-from utils.db import get_engine, get_session_local
 from utils.config import get_settings
 from utils.settings import load_environment
 from utils.logging_config import setup_logging
@@ -18,45 +16,12 @@ def create_app() -> FastAPI:
     setup_logging()
     log = logging.getLogger(__name__)
 
-    engine = get_engine()
-    session_local = get_session_local()
-
     @asynccontextmanager
     async def lifespan(app: FastAPI):
-        log.info("DELTA Backend Starting...")
-        
-        # Load credentials early using centralized utility
-        from utils.google_utils import get_credentials
-        creds = get_credentials()
+        log.info("DELTA Backend Starting (Stateless Mode)...")
         
         from .services.llm_service import get_llm_service
         get_llm_service().init_vertex()
-
-        if creds:
-            log.info("Google Cloud credentials loaded successfully.")
-        else:
-            log.warning("Google Cloud credentials NOT loaded. Cloud features will fail.")
-
-        if session_local and engine:
-            try:
-                log.info("Attempting to connect to database...")
-                Base.metadata.create_all(bind=engine)
-                log.info("Tables created successfully.")
-                create_initial_user(session_local)
-                
-                # Cleanup stalled jobs
-                from .services.job_service import get_job_service
-                db = session_local()
-                try:
-                    count = get_job_service().cleanup_stalled_jobs(db)
-                    if count > 0:
-                        log.info(f"Cleaned up {count} stalled jobs.")
-                finally:
-                    db.close()
-            except Exception as e:
-                log.error("Failed to connect to database: %s", e)
-        else:
-            log.warning("Skipping database initialization (no SessionLocal)")
 
         yield
 
@@ -78,40 +43,7 @@ def create_app() -> FastAPI:
 
     @app.get("/")
     async def root():
-        return {"message": "DELTA backend is running"}
-
-    # Add this OPTIONS handler before including the router
-    @app.options("/{full_path:path}")
-    async def handle_options_request(request: Request, full_path: str):
-        origin = request.headers.get("Origin")
-        # Dynamically allow the origin if it's in our allowed list
-        allow_origin = origin if origin in origins else (origins[0] if origins else "*")
-
-        return Response(status_code=204, headers={
-            "Access-Control-Allow-Origin": allow_origin,
-            "Access-Control-Allow-Methods": "POST, GET, OPTIONS, PUT, PATCH, DELETE", 
-            "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With",
-            "Access-Control-Allow-Credentials": "true",
-            "Access-Control-Max-Age": "86400"
-        })
-
-    if not os.environ.get("DATABASE_URL"):
-        log.warning("DATABASE_URL environment variable is not set! Database features will fail.")
-
-    def create_initial_user(session_factory):
-        if not session_factory:
-            return
-        db = session_factory()
-        try:
-            from .services.user_service import get_user_service
-            user_service = get_user_service()
-            if not user_service.get_user_by_username(db, "commander"):
-                log.info("Creating initial default user: commander")
-                user_service.create_user(db, "commander", "commander@delta.ai", "delta123")
-        except Exception as e:
-            log.error("Failed to create initial user: %s", e)
-        finally:
-            db.close()
+        return {"message": "DELTA backend is running (Stateless)"}
 
     # Include Routers
     app.include_router(system.router, tags=["system"])

@@ -29,7 +29,7 @@ const ConversationContext = createContext<ConversationContextType | undefined>(u
 
 export const ConversationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   console.log("DELTA: ConversationProvider rendering");
-  const [currentConversationId, setCurrentConversationId] = useState<number | null>(null);
+  const [currentConversationId, setCurrentConversationId] = useState<number | null>(999);
   const [conversationHistory, dispatch] = useReducer(conversationReducer, []);
   const [activeMode, setActiveMode] = useState<string>('general');
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -38,18 +38,13 @@ export const ConversationProvider: React.FC<{ children: ReactNode }> = ({ childr
   const createNewConversation = useCallback(async (mode: string, userId = 101): Promise<number | null> => {
     setIsLoading(true);
     setError(null);
-    console.log("DELTA: Creating conversation for mode:", mode);
+    console.log("DELTA: Creating stateless session for mode:", mode);
     try {
-      const data = await apiClient.post<Conversation>('/conversations/', { active_mode: mode, user_id: userId });
-      console.log("DELTA: Conversation established:", data.id);
-      setCurrentConversationId(data.id);
+      // Mock conversation establishment
+      setCurrentConversationId(999);
       dispatch({ type: "reset" });
       setActiveMode(mode);
-      return data.id;
-    } catch (err: any) {
-      console.error('DELTA: Failed to create conversation:', err);
-      setError('Connection failed. Please check your network.');
-      return null;
+      return 999;
     } finally {
       setIsLoading(false);
     }
@@ -68,16 +63,6 @@ export const ConversationProvider: React.FC<{ children: ReactNode }> = ({ childr
   }, []);
 
   const sendMessage = useCallback(async (text: string, onChunkReceived?: (chunk: string) => void): Promise<string | undefined> => {
-    let conversationId = currentConversationId;
-    if (!conversationId) {
-        console.log("DELTA: No conversation ID found, creating one...");
-        conversationId = await createNewConversation(activeMode);
-        if (!conversationId) {
-            console.error("DELTA: Failed to create conversation on the fly.");
-            return;
-        }
-    }
-    
     setIsLoading(true);
     addMessage('user', text);
     
@@ -91,7 +76,7 @@ export const ConversationProvider: React.FC<{ children: ReactNode }> = ({ childr
 
       await apiClient.stream('/process_stream', { 
         user_input: text, 
-        conversation_id: conversationId 
+        conversation_id: 999 
       }, (chunk: string) => {
         fullResponse += chunk;
         updateMessage(fullResponse);
@@ -108,7 +93,7 @@ export const ConversationProvider: React.FC<{ children: ReactNode }> = ({ childr
     } finally {
       setIsLoading(false);
     }
-  }, [addMessage, currentConversationId, createNewConversation, activeMode]);
+  }, [addMessage]);
 
   const value: ConversationContextType = {
     currentConversationId,

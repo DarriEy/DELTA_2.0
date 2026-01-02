@@ -3,16 +3,9 @@ fastapi
 uvicorn
 pydantic==2.*
 
-# Database
-SQLAlchemy
-alembic
-psycopg2-binary
-asyncpg
-
 # Authentication & Security
 bcrypt
 python-jose[cryptography]
-passlib[recommended]
 python-multipart
 python-dotenv
 
@@ -24,9 +17,6 @@ email-validator==2.1.0.post1
 # Google Cloud Services
 google-genai
 google-cloud-aiplatform
-google-cloud-storage
-google-cloud-texttospeech>=2.12.0
-google-cloud-vision
 google-api-core>=2.11.0
 google-auth
 grpcio>=1.51.0
@@ -44,13 +34,6 @@ netCDF4
 h5netcdf
 cftime
 numexpr
-
-# Geospatial
-geopandas
-rasterio
-pyproj
-shapely
-fiona
 
 # Utilities
 PyYAML

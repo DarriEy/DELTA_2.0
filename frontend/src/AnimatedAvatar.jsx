@@ -1,6 +1,5 @@
 import React, { useState, useRef, useMemo } from "react";
 import { useConversation } from "./contexts/ConversationContext";
-import { useSpeech } from "./contexts/SpeechContext";
 import { useBackgrounds } from "./hooks/useBackgrounds";
 import SummaryModal from './components/Modals/SummaryModal';
 import dropletAvatar from './assets/Droplet_avatar.png';
@@ -31,7 +30,6 @@ const AnimatedAvatar = () => {
     createNewConversation
   } = useConversation();
   
-  const { isListening, isTalking, startListening, speak } = useSpeech();
   const { backgrounds, generateBackground, isLoading: isBackgroundLoading } = useBackgrounds();
 
   const [selectedModel, setSelectedModel] = useState("SUMMA");
@@ -56,10 +54,6 @@ const AnimatedAvatar = () => {
   } = useSpeechInteraction({
     sendMessage,
     addLocalAssistantMessage,
-    startListening,
-    speak,
-    isListening,
-    isTalking,
   });
 
   const {

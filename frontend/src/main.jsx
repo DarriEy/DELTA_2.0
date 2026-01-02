@@ -6,14 +6,11 @@ import './index.css'
 import App from './App.jsx'
 
 import { ConversationProvider } from './contexts/ConversationContext'
-import { SpeechProvider } from './contexts/SpeechContext.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ConversationProvider>
-      <SpeechProvider>
-        <App />
-      </SpeechProvider>
+      <App />
     </ConversationProvider>
   </StrictMode>,
 )

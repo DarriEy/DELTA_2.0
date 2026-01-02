@@ -1,111 +1,58 @@
 from fastapi import APIRouter, HTTPException, Depends, status
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy.orm import Session
-from utils.db import get_db
-from ..models import Conversation as DBConversation, Message as DBMessage, User as DBUser
-from ..services.user_service import UserService, get_user_service
-from ..auth import create_access_token, verify_password, get_current_user
+from ..auth import create_access_token, get_current_user
 from ..schemas import (
-    UserCreate, User, 
-    ConversationCreate, Conversation, ConversationUpdate,
-    MessageCreate, Message, APIResponse
+    User, 
+    ConversationCreate, Conversation,
+    APIResponse
 )
 from typing import List, Optional
-
+import datetime
 import logging
+
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 @router.post("/users/login")
 async def login(
-    form_data: OAuth2PasswordRequestForm = Depends(),
-    db: Optional[Session] = Depends(get_db),
-    user_service: UserService = Depends(get_user_service)
+    form_data: OAuth2PasswordRequestForm = Depends()
 ):
-    if db is None:
-        if form_data.username == "commander" and form_data.password == "delta123":
-            logger.warning("DB is down, allowing stateless login for commander")
-            access_token = create_access_token(data={"sub": "commander"})
-            # Return a mock user object
-            return {
-                "access_token": access_token, 
-                "token_type": "bearer", 
-                "user": {"id": 101, "username": "commander", "email": "commander@stateless.delta.ai"}
-            }
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Database connection unavailable for authentication",
-            )
-
-    user = user_service.get_user_by_username(db, form_data.username)
-    if not user or not verify_password(form_data.password, user.password_hash):
+    if form_data.username == "commander" and form_data.password == "delta123":
+        access_token = create_access_token(data={"sub": "commander"})
+        return {
+            "access_token": access_token, 
+            "token_type": "bearer", 
+            "user": {"id": 101, "username": "commander", "email": "commander@delta.ai"}
+        }
+    else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
+            detail="Invalid credentials",
         )
-    
-    access_token = create_access_token(data={"sub": user.username})
-    return {"access_token": access_token, "token_type": "bearer", "user": user}
 
 @router.get("/users/me", response_model=APIResponse[User])
-async def read_users_me(current_user: DBUser = Depends(get_current_user)):
+async def read_users_me(current_user: dict = Depends(get_current_user)):
     return APIResponse(data=current_user)
-
-@router.post("/users/", response_model=APIResponse[User])
-def create_user(
-    user: UserCreate, 
-    db: Session = Depends(get_db),
-    user_service: UserService = Depends(get_user_service)
-):
-    existing_user = user_service.get_user_by_email(db, user.email)
-    if existing_user:
-        raise HTTPException(status_code=409, detail="Email already exists")
-    
-    existing_username = user_service.get_user_by_username(db, user.username)
-    if existing_username:
-        raise HTTPException(status_code=409, detail="Username already exists")
-
-    try:
-        new_user = user_service.create_user(db, user.username, user.email, user.password)
-        return APIResponse(data=new_user)
-    except Exception as e:
-        if db:
-            db.rollback()
-        raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
 
 @router.post("/conversations/", response_model=APIResponse[Conversation])
 def create_conversation(
-    conversation: ConversationCreate, 
-    db: Optional[Session] = Depends(get_db),
-    user_service: UserService = Depends(get_user_service),
-    current_user: DBUser = Depends(get_current_user)
+    conversation: ConversationCreate,
+    current_user: dict = Depends(get_current_user)
 ):
-    if db is None:
-        # Return a mock conversation for degraded mode
-        import datetime
-        mock_conv = DBConversation(id=999, user_id=current_user.id, start_time=datetime.datetime.now(), active_mode=conversation.active_mode)
-        return APIResponse(data=mock_conv)
-
-    try:
-        conv_dict = conversation.dict()
-        conv_dict["user_id"] = current_user.id
-        db_conversation = user_service.create_conversation(db, conv_dict)
-        return APIResponse(data=db_conversation)
-    except Exception as e:
-        if db:
-            db.rollback()
-        raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
+    # Return a stateless mock conversation
+    mock_conv = {
+        "id": 999, 
+        "user_id": current_user["id"] if isinstance(current_user, dict) else current_user.id, 
+        "start_time": datetime.datetime.now(), 
+        "active_mode": conversation.active_mode
+    }
+    return APIResponse(data=mock_conv)
 
 @router.get("/conversations/", response_model=APIResponse[List[Conversation]])
 def get_conversations(
-    db: Session = Depends(get_db),
-    user_service: UserService = Depends(get_user_service),
-    current_user: DBUser = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user)
 ):
-    conversations = user_service.get_conversations_by_user(db, current_user.id)
-    return APIResponse(data=conversations)
+    return APIResponse(data=[])
 
 @router.get("/messages/{conversation_id}", response_model=APIResponse[List[Message]])
 def get_messages(

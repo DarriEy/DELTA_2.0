@@ -1,12 +1,12 @@
 import { useState, useCallback, useEffect } from 'react';
 
-export const useAvatarAnimations = (isTalking) => {
+export const useAvatarAnimations = (isProcessing) => {
   const [isNodding, setIsNodding] = useState(false);
   const [isShaking, setIsShaking] = useState(false);
 
   useEffect(() => {
-    setIsNodding(isTalking);
-  }, [isTalking]);
+    setIsNodding(isProcessing);
+  }, [isProcessing]);
 
   const triggerShake = useCallback(() => {
     setIsShaking(true);

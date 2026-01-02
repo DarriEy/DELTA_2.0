@@ -3,7 +3,6 @@ import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import { useConversation } from '../contexts/ConversationContext';
-import { useSpeech } from '../contexts/SpeechContext';
 
 const ChatMessage = memo(({ msg }) => (
   <div className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'} space-y-2 group`}>
@@ -28,7 +27,6 @@ const ChatMessage = memo(({ msg }) => (
 
 const ChatPanel = ({ isActive, setIsProcessing }) => {
   const { conversationHistory, sendMessage, isLoading } = useConversation();
-  const { isListening } = useSpeech();
   const [inputText, setInputText] = useState('');
   const scrollRef = useRef(null);
 
@@ -107,7 +105,7 @@ const ChatPanel = ({ isActive, setIsProcessing }) => {
               autoFocus
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
-              placeholder={isListening ? "Syncing voice stream..." : "Input command sequence..."}
+              placeholder="Input command sequence..."
               className="flex-1 bg-transparent px-4 py-2 text-sm focus:outline-none placeholder:text-white/10 text-white font-light tracking-wide disabled:opacity-50"
               disabled={isLoading || !isActive}
             />
@@ -125,15 +123,6 @@ const ChatPanel = ({ isActive, setIsProcessing }) => {
             </button>
           </div>
         </form>
-      </div>
-
-      {/* Mic Active Decor */}
-      <div className={`absolute top-12 right-8 flex flex-col items-end gap-1 transition-all duration-500 ${isListening ? 'opacity-100' : 'opacity-0 scale-90 translate-x-4'}`}>
-        <div className="flex items-center gap-2">
-          <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping"></div>
-          <span className="text-[7px] font-black text-red-500 uppercase tracking-[0.4em]">Mic Active</span>
-        </div>
-        <div className="w-24 h-[1px] bg-gradient-to-l from-red-500/50 to-transparent"></div>
       </div>
     </div>
   );

@@ -60,59 +60,6 @@ class LLMService:
             self._provider = get_llm_provider(settings)
         return self._provider
 
-    async def generate_image(self, prompt: str) -> Optional[str]:
-        settings = get_settings()
-        if not settings.project_id or not settings.location:
-            logger.error("PROJECT_ID or LOCATION not configured for image generation.")
-            return None
-
-        url = (
-            f"https://{settings.location}-aiplatform.googleapis.com/v1/projects/"
-            f"{settings.project_id}/locations/{settings.location}/publishers/google/models/"
-            "imagegeneration:predict"
-        )
-
-        try:
-            creds = get_credentials()
-            if not creds:
-                return None
-
-            auth_request = google.auth.transport.requests.Request()
-            creds.refresh(auth_request)
-
-            headers = {
-                "Authorization": f"Bearer {creds.token}",
-                "Content-Type": "application/json; charset=utf-8",
-            }
-
-            data = {
-                "instances": [{"prompt": prompt}],
-                "parameters": {"aspectRatio": "16:9", "sampleCount": 1},
-            }
-
-            async with httpx.AsyncClient(timeout=120.0) as client:
-                response = await client.post(url, headers=headers, json=data)
-
-            if response.status_code != 200:
-                logger.error(
-                    "Vertex AI Image Error: %s - %s",
-                    response.status_code,
-                    response.text,
-                )
-                return None
-
-            response_data = response.json()
-            predictions = response_data.get("predictions")
-
-            if predictions:
-                base64_image = predictions[0].get("bytesBase64Encoded")
-                if base64_image:
-                    return f"data:image/png;base64,{base64_image}"
-            return None
-        except Exception as exc:
-            logger.error("Error generating image: %s", exc)
-            return None
-
     async def generate_response(
         self,
         user_input: str,
@@ -124,13 +71,13 @@ class LLMService:
         )
         provider = self._get_provider()
 
-        tools = [get_tools_config()] if role == "DELTA" else None
+        # Tools omitted for simplified stateless mode
         if hasattr(provider, "generate_response_with_history"):
             return await provider.generate_response_with_history(
                 user_input,
                 system_prompt,
                 history or [],
-                tools=tools,
+                tools=None,
             )
         return await provider.generate_response(user_input, system_prompt)
 
