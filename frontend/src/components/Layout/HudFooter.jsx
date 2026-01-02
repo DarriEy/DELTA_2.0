@@ -2,22 +2,21 @@ import React from "react";
 
 const HudFooter = () => {
   return (
-    <footer className="absolute bottom-10 left-12 right-12 z-20 flex justify-between items-end pointer-events-none">
-      <div className="flex flex-col gap-4 pointer-events-auto">
-        <div className="flex gap-6">
+    <footer className="absolute bottom-12 left-16 right-16 z-20 flex justify-between items-end pointer-events-none opacity-40 hover:opacity-100 transition-opacity duration-500">
+      <div className="flex flex-col gap-6 pointer-events-auto">
+        <div className="flex gap-12">
           {[
-            { label: "Compute", value: "42.8 TFLOPS" },
-            { label: "Latency", value: "14ms" },
-            { label: "Model", value: "Gemini-2.0" },
+            { label: "Environment", value: "Stateless" },
+            { label: "Engine", value: "Gemini-Flash" },
           ].map((stat, i) => (
             <div
               key={i}
-              className="px-5 py-3 bg-white/5 border border-white/10 backdrop-blur-md rounded-2xl flex flex-col"
+              className="flex flex-col gap-1"
             >
-              <span className="text-[8px] uppercase font-bold text-white/20 mb-1">
+              <span className="text-[7px] uppercase font-bold text-slate-500 tracking-[0.3em]">
                 {stat.label}
               </span>
-              <span className="text-xs font-mono font-black text-white/80">
+              <span className="text-[10px] font-medium text-slate-300 tracking-wider">
                 {stat.value}
               </span>
             </div>
@@ -26,12 +25,8 @@ const HudFooter = () => {
       </div>
 
       <div className="text-right pointer-events-auto">
-        <p className="text-[9px] uppercase tracking-[0.4em] text-white/20 font-light leading-relaxed">
-          Proprietary Intelligence Core
-          <br />
-          <span className="text-white/60 font-black">
-            HYDROLOGICAL RESEARCH UNIT
-          </span>
+        <p className="text-[8px] uppercase tracking-[0.4em] text-slate-600 font-medium">
+          Scientific Computing <span className="text-slate-400">Node 01</span>
         </p>
       </div>
     </footer>

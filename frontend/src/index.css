@@ -4,78 +4,54 @@
 
 @layer components {
   .glass-panel {
-    @apply bg-white/10 backdrop-blur-md border border-white/20 shadow-xl;
+    @apply bg-slate-900/40 backdrop-blur-md border border-slate-800 shadow-lg;
   }
   
   .glass-card {
-    @apply bg-black/40 backdrop-blur-lg border border-white/10 shadow-2xl rounded-2xl text-white;
+    @apply bg-slate-900/60 backdrop-blur-xl border border-slate-800 shadow-xl rounded-lg text-slate-200;
   }
 
-  .glass-button {
-    @apply px-4 py-2 rounded-xl backdrop-blur-sm transition-all duration-300 border border-white/10 shadow-lg hover:shadow-cyan-500/20 hover:scale-105 active:scale-95;
-  }
-
-  .dock-container {
-    @apply fixed bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4 px-6 py-3 rounded-full bg-black/30 backdrop-blur-xl border border-white/10 shadow-2xl z-50;
+  .academic-button {
+    @apply px-5 py-2 rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-all duration-200 text-xs font-medium tracking-widest uppercase;
   }
 }
 
 :root {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  line-height: 1.5;
+  line-height: 1.6;
   font-weight: 400;
   color-scheme: dark;
-  color: rgba(255, 255, 255, 0.9);
+  color: #e2e8f0;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
   overflow: hidden;
-  background-color: #0f172a; /* Fallback dark blue */
+  background-color: #020617; /* Deep slate professional black */
 }
 
-/* Smooth Background Transitions */
-.bg-transition {
-  transition: background-image 1s ease-in-out;
+/* Minimalist Background Pattern */
+.academic-bg {
+  background-image: radial-gradient(#1e293b 0.5px, transparent 0.5px);
+  background-size: 24px 24px;
 }
 
-/* Custom Animations */
-@keyframes float {
+/* Custom Animations - Subtler */
+@keyframes subtle-float {
   0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-10px); }
+  50% { transform: translateY(-4px); }
 }
 
-.animate-float {
-  animation: float 6s ease-in-out infinite;
+.animate-subtle-float {
+  animation: subtle-float 8s ease-in-out infinite;
 }
 
-@keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.3); }
-  50% { box-shadow: 0 0 40px rgba(59, 130, 246, 0.6); }
+@keyframes focus-glow {
+  0%, 100% { border-color: rgba(148, 163, 184, 0.1); }
+  50% { border-color: rgba(148, 163, 184, 0.3); }
 }
 
-.animate-pulse-glow {
-  animation: pulse-glow 3s infinite;
-}
-
-/* Talking Animation */
-@keyframes talking {
-  0%, 100% { transform: scaleY(1); }
-  50% { transform: scaleY(0.92) scaleX(1.02); }
-}
-
-.animate-talking {
-  animation: talking 0.25s infinite ease-in-out;
-}
-
-/* Liquid/Organic Shape Animation for Listening */
-@keyframes liquid {
-  0% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
-  50% { border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%; }
-  100% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
-}
-
-.animate-liquid {
-  animation: liquid 8s ease-in-out infinite;
+.animate-focus-glow {
+  animation: focus-glow 4s infinite;
 }

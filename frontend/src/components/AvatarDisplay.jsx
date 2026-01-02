@@ -10,43 +10,35 @@ const AvatarDisplay = ({
   dropletAvatar 
 }) => {
   return (
-    <div className="relative group py-8">
+    <div className="relative py-12 flex flex-col items-center gap-8">
       <div 
         ref={avatarRef}
         onClick={onClick}
         className={`
-          w-64 h-64 md:w-72 md:h-72 rounded-full cursor-pointer relative
-          transition-all duration-1000 ease-in-out
-          ${isProcessing ? 'scale-105' : 'hover:scale-102'}
+          w-48 h-48 md:w-56 md:h-56 rounded-full cursor-pointer relative
+          transition-all duration-1000 ease-in-out border
+          ${isProcessing ? 'border-slate-400 scale-105' : 'border-slate-800 hover:border-slate-600'}
           ${isNodding ? 'nod-animation' : ''}
           ${isShaking ? 'shake-animation' : ''}
         `}
       >
-        {/* Subtle Ambient Glow */}
-        <div className={`absolute inset-0 rounded-full bg-blue-500/5 blur-3xl transition-all duration-1000 ${isProcessing ? 'opacity-100 scale-110' : 'opacity-0'}`}></div>
-        
         {/* Simple Avatar Container */}
-        <div className={`
-          absolute inset-0 rounded-full overflow-hidden
-          border transition-colors duration-1000
-          ${isProcessing ? 'border-blue-500/40' : 'border-white/[0.05]'}
-        `}>
+        <div className="absolute inset-0 rounded-full overflow-hidden bg-slate-900">
           <img 
             src={dropletAvatar} 
-            alt="Delta" 
-            className={`w-full h-full object-cover transition-all duration-1000 opacity-60
-              ${isProcessing ? 'opacity-100 brightness-110' : ''}
+            alt="Research Unit" 
+            className={`w-full h-full object-cover transition-all duration-1000 grayscale
+              ${isProcessing ? 'opacity-100' : 'opacity-40'}
             `} 
           />
         </div>
+      </div>
 
-        {/* Minimalist HUD */}
-        <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2">
-          <div className="flex gap-2">
-            {isProcessing && <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce shadow-[0_0_8px_#3b82f6]"></div>}
-            {isLoading && <div className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse"></div>}
-          </div>
-          <span className="text-[8px] uppercase tracking-[0.4em] font-medium text-white/10">Delta Core</span>
+      <div className="flex flex-col items-center gap-2">
+        <span className="text-[10px] font-medium text-slate-500 uppercase tracking-[0.4em]">Core Interface</span>
+        <div className="flex gap-3 h-1 items-center">
+          {isProcessing && <div className="w-1 h-1 rounded-full bg-slate-400 animate-pulse"></div>}
+          {isLoading && <div className="w-1 h-1 rounded-full bg-slate-600 animate-pulse"></div>}
         </div>
       </div>
     </div>

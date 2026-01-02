@@ -83,7 +83,7 @@ const AnimatedAvatar = () => {
 
   return (
     <div 
-      className="min-h-screen w-screen flex flex-col items-center justify-center font-sans text-white selection:bg-blue-500/30 transition-all duration-1000 bg-slate-950"
+      className="min-h-screen w-screen flex flex-col items-center justify-center font-sans text-slate-200 transition-all duration-1000 bg-slate-950 academic-bg"
       style={backgroundStyle}
     >
       
@@ -91,10 +91,10 @@ const AnimatedAvatar = () => {
 
       <ModeSelector onSwitchMode={switchMode} onGetSummary={handleGetSummary} />
 
-      <main className="z-10 w-full max-w-[1400px] px-12 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+      <main className="z-10 w-full max-w-[1200px] px-16 grid grid-cols-1 lg:grid-cols-12 gap-20 items-center">
         
         {/* Left: Avatar Display */}
-        <div className="lg:col-span-5 flex justify-center">
+        <div className="lg:col-span-4 flex justify-center">
           <AvatarDisplay 
             isProcessing={finalIsProcessing}
             isLoading={isLoading}
@@ -107,8 +107,8 @@ const AnimatedAvatar = () => {
         </div>
 
         {/* Right: Functional HUD */}
-        <div className="lg:col-span-7 space-y-8 h-[700px] flex flex-col justify-center">
-          <div className="grid grid-cols-1 gap-8 h-full py-12">
+        <div className="lg:col-span-8 h-[600px] flex flex-col justify-center">
+          <div className="grid grid-cols-1 h-full py-12">
             
             {/* Upper: Chat Stream */}
             <ChatPanel isActive={isChatActive} setIsProcessing={setIsProcessing} />
