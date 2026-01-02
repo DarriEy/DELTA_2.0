@@ -1,5 +1,4 @@
 import React from 'react';
-import { useSpeech } from '../contexts/SpeechContext';
 
 const AvatarDisplay = ({ 
   isProcessing, 
