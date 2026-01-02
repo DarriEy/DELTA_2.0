@@ -52,6 +52,29 @@ body {
   50% { border-color: rgba(148, 163, 184, 0.3); }
 }
 
-.animate-focus-glow {
-  animation: focus-glow 4s infinite;
+@keyframes progress-slide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.animate-progress-slide {
+  animation: progress-slide 2s linear infinite;
+}
+
+/* Custom Scrollbar */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+}
+
+.scrollbar-track-transparent::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thumb-slate-800::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 10px;
+}
+
+.scrollbar-thumb-slate-800:hover::-webkit-scrollbar-thumb {
+  background: #334155;
 }

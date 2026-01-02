@@ -135,16 +135,24 @@ export const apiClient = {
       if (done) break;
       
       buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
+      const parts = buffer.split('\n\n');
+      buffer = parts.pop() || '';
 
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          let content = line.slice(6);
-          // Unescape literal \n provided by backend
-          content = content.replace(/\\n/g, '\n');
-          result += content;
-          if (onChunk) onChunk(content);
+      for (const part of parts) {
+        const lines = part.split('\n');
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const raw = line.slice(6);
+            try {
+              const content = JSON.parse(raw);
+              result += content;
+              if (onChunk) onChunk(content);
+            } catch (e) {
+              // Fallback for non-JSON content
+              result += raw;
+              if (onChunk) onChunk(raw);
+            }
+          }
         }
       }
     }
