@@ -6,6 +6,8 @@ from typing import Dict
 
 from fastapi.responses import StreamingResponse
 from ..auth import get_current_user
+from ..llm_providers import get_tts_provider
+from utils.config import get_settings
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -43,3 +45,21 @@ async def get_summary(
     current_user: dict = Depends(get_current_user)
 ):
     return APIResponse(data="Stateless summary unavailable.")
+
+@router.post("/tts_stream")
+async def text_to_speech_stream(
+    request: dict,
+    settings = Depends(get_settings)
+):
+    text = request.get("text", "")
+    if not text:
+        raise HTTPException(status_code=400, detail="Text is required")
+    
+    tts_provider = get_tts_provider(settings)
+    if not tts_provider:
+        raise HTTPException(status_code=501, detail="TTS provider not configured")
+    
+    return StreamingResponse(
+        tts_provider.generate_speech_stream(text),
+        media_type="audio/mpeg"
+    )

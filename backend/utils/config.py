@@ -17,6 +17,13 @@ class Settings:
 
     llm_model: str
     image_model: str
+    
+    # New streaming API settings
+    huggingface_api_key: Optional[str]
+    elevenlabs_api_key: Optional[str]
+    llm_provider: str
+    tts_provider: str
+    elevenlabs_voice_id: str
 
     hydro_model_base_url: str
     symfluence_code_dir: Optional[str]
@@ -37,6 +44,12 @@ class Settings:
             google_application_credentials=get_env("GOOGLE_APPLICATION_CREDENTIALS"),
             llm_model=get_env("LLM_MODEL", "gemini-2.0-flash"),
             image_model="imagen-3",
+            # New streaming settings
+            huggingface_api_key=get_env("HUGGINGFACE_API_KEY"),
+            elevenlabs_api_key=get_env("ELEVENLABS_API_KEY"),
+            llm_provider=get_env("LLM_PROVIDER", "gemini"),
+            tts_provider=get_env("TTS_PROVIDER", "google"),
+            elevenlabs_voice_id=get_env("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM"),
             hydro_model_base_url=get_env("HYDRO_MODEL_BASE_URL", "http://localhost:8080"),
             symfluence_code_dir=get_env(
                 "SYMFLUENCE_CODE_DIR",

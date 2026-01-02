@@ -5,6 +5,8 @@ import os
 import logging
 import asyncio
 import functools
+import json
+import httpx
 
 try:
     import google.genai as genai
@@ -12,6 +14,16 @@ try:
 except ImportError:  # pragma: no cover - optional dependency
     genai = None
     types = None
+
+try:
+    from huggingface_hub import InferenceClient
+except ImportError:
+    InferenceClient = None
+
+try:
+    from elevenlabs import ElevenLabs, Voice, VoiceSettings
+except ImportError:
+    ElevenLabs = None
 
 from utils.config import Settings
 
@@ -249,14 +261,120 @@ class GeminiProvider(LLMProvider):
                     yield f"Error: {err_msg}"
                     return
 
+class HuggingFaceProvider(LLMProvider):
+    def __init__(self, api_key: Optional[str] = None, model_name: str = "microsoft/DialoGPT-medium"):
+        self.api_key = api_key or os.getenv("HUGGINGFACE_API_KEY")
+        self.model_name = model_name
+        self.client = InferenceClient(token=self.api_key) if InferenceClient else None
+        
+    async def generate_response(self, prompt: str, system_prompt: str) -> str:
+        if not self.client:
+            return "Error: Hugging Face client not initialized"
+            
+        try:
+            full_prompt = f"{system_prompt}\n\nUser: {prompt}\nAssistant:"
+            response = await asyncio.to_thread(
+                self.client.text_generation,
+                prompt=full_prompt,
+                model=self.model_name,
+                max_new_tokens=512,
+                temperature=0.7,
+                stream=False
+            )
+            return response
+        except Exception as e:
+            logger.error(f"Hugging Face Error: {e}")
+            return f"Error: {e}"
+    
+    async def generate_response_stream(self, prompt: str, system_prompt: str):
+        if not self.client:
+            yield "Error: Hugging Face client not initialized"
+            return
+            
+        try:
+            full_prompt = f"{system_prompt}\n\nUser: {prompt}\nAssistant:"
+            
+            # Use text_generation with stream=True
+            def get_stream():
+                return self.client.text_generation(
+                    prompt=full_prompt,
+                    model=self.model_name,
+                    max_new_tokens=512,
+                    temperature=0.7,
+                    stream=True
+                )
+            
+            stream = await asyncio.to_thread(get_stream)
+            
+            async def async_generator():
+                for chunk in stream:
+                    if hasattr(chunk, 'token') and hasattr(chunk.token, 'text'):
+                        yield chunk.token.text
+                    elif hasattr(chunk, 'generated_text'):
+                        yield chunk.generated_text
+                    elif isinstance(chunk, str):
+                        yield chunk
+            
+            async for token in async_generator():
+                if token:
+                    yield token
+                    
+        except Exception as e:
+            logger.error(f"Hugging Face Stream Error: {e}")
+            yield f"Error: {e}"
+
+class ElevenLabsTTSProvider:
+    def __init__(self, api_key: Optional[str] = None, voice_id: str = "21m00Tcm4TlvDq8ikWAM"):
+        self.api_key = api_key or os.getenv("ELEVENLABS_API_KEY")
+        self.voice_id = voice_id
+        self.client = ElevenLabs(api_key=self.api_key) if ElevenLabs else None
+        
+    async def generate_speech_stream(self, text: str):
+        if not self.client:
+            logger.error("ElevenLabs client not initialized")
+            return
+            
+        try:
+            audio_stream = await asyncio.to_thread(
+                self.client.generate,
+                text=text,
+                voice=Voice(
+                    voice_id=self.voice_id,
+                    settings=VoiceSettings(stability=0.71, similarity_boost=0.5)
+                ),
+                stream=True
+            )
+            
+            for chunk in audio_stream:
+                yield chunk
+        except Exception as e:
+            logger.error(f"ElevenLabs TTS Error: {e}")
+
 def get_llm_provider(settings: Settings) -> LLMProvider:
+    provider_type = getattr(settings, 'llm_provider', 'gemini').lower()
+    
+    if provider_type == 'huggingface':
+        api_key = getattr(settings, 'huggingface_api_key', None)
+        model_name = getattr(settings, 'llm_model', 'microsoft/DialoGPT-medium')
+        return HuggingFaceProvider(api_key=api_key, model_name=model_name)
+    
+    # Default to Gemini
     api_key = settings.google_api_key
     model_name = settings.llm_model
-
-    # We use GeminiProvider which now handles both Vertex and AI Studio
     return GeminiProvider(
         api_key=api_key,
         model_name=model_name,
         project_id=settings.project_id,
         location=settings.location,
     )
+
+def get_tts_provider(settings: Settings):
+    tts_provider = getattr(settings, 'tts_provider', 'google').lower()
+    
+    if tts_provider == 'elevenlabs':
+        api_key = getattr(settings, 'elevenlabs_api_key', None)
+        voice_id = getattr(settings, 'elevenlabs_voice_id', '21m00Tcm4TlvDq8ikWAM')
+        return ElevenLabsTTSProvider(api_key=api_key, voice_id=voice_id)
+    
+    # Return None for Google TTS (handled elsewhere)
+    return None

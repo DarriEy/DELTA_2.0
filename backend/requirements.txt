@@ -23,6 +23,8 @@ grpcio>=1.51.0
 
 # AI/ML
 openai
+huggingface_hub
+elevenlabs
 
 # Data Processing
 pandas
