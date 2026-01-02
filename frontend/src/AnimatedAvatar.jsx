@@ -117,7 +117,7 @@ const AnimatedAvatar = () => {
           <div className="grid grid-cols-1 gap-8 h-full py-12">
             
             {/* Upper: Chat Stream */}
-            <ChatPanel isActive={isChatActive} />
+            <ChatPanel isActive={isChatActive} setIsProcessing={setIsProcessing} />
 
             {/* Lower: Dynamic Workspace */}
             <DynamicWorkspace 

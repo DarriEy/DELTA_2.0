@@ -26,7 +26,7 @@ const ChatMessage = memo(({ msg }) => (
   </div>
 ));
 
-const ChatPanel = ({ isActive }) => {
+const ChatPanel = ({ isActive, setIsProcessing }) => {
   const { conversationHistory, sendMessage, isLoading } = useConversation();
   const { isListening } = useSpeech();
   const [inputText, setInputText] = useState('');
@@ -49,9 +49,12 @@ const ChatPanel = ({ isActive }) => {
     setInputText('');
     
     try {
+      if (setIsProcessing) setIsProcessing(true);
       await sendMessage(text);
     } catch (err) {
       console.error("Failed to send message:", err);
+    } finally {
+      if (setIsProcessing) setIsProcessing(false);
     }
   };
 
@@ -59,7 +62,7 @@ const ChatPanel = ({ isActive }) => {
     <div className={`flex flex-col h-[450px] relative overflow-hidden transition-all duration-1000 border rounded-[2rem] shadow-2xl
       ${isActive 
         ? 'bg-black/40 backdrop-blur-2xl border-white/10 opacity-100 translate-y-0 scale-100' 
-        : 'bg-transparent border-transparent opacity-40 translate-y-4 scale-[0.98] pointer-events-none grayscale blur-[2px]'}`}
+        : 'bg-transparent border-transparent opacity-40 translate-y-4 scale-[0.98] grayscale blur-[2px]'}`}
     >
       {/* HUD Header Decoration */}
       <div className="flex items-center justify-between px-8 py-4 border-b border-white/5 bg-white/[0.02]">
@@ -77,7 +80,7 @@ const ChatPanel = ({ isActive }) => {
       {/* Messages */}
       <div 
         ref={scrollRef}
-        className="flex-1 overflow-y-auto p-8 space-y-10 scrollbar-hide pb-24"
+        className={`flex-1 overflow-y-auto p-8 space-y-10 scrollbar-hide pb-24 ${isActive ? 'pointer-events-auto' : 'pointer-events-none'}`}
       >
         {conversationHistory.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center space-y-4">
@@ -92,24 +95,25 @@ const ChatPanel = ({ isActive }) => {
       </div>
 
       {/* Input Area */}
-      <div className={`absolute bottom-0 left-0 right-0 p-6 transition-all duration-700 delay-300
-        ${isActive ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
+      <div className={`absolute bottom-0 left-0 right-0 p-6 transition-all duration-700 delay-300 z-50
+        ${isActive ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-10 pointer-events-none'}`}
       >
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/90 to-transparent"></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/90 to-transparent pointer-events-none"></div>
         <form onSubmit={handleSubmit} className="relative group">
-          <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500"></div>
+          <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500 pointer-events-none"></div>
           <div className="relative flex items-center gap-2 bg-white/[0.03] border border-white/10 rounded-2xl p-1.5 focus-within:border-blue-500/40 transition-all">
             <input
               type="text"
+              autoFocus
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               placeholder={isListening ? "Syncing voice stream..." : "Input command sequence..."}
-              className="flex-1 bg-transparent px-4 py-2 text-sm focus:outline-none placeholder:text-white/10 text-white font-light tracking-wide"
-              disabled={isLoading}
+              className="flex-1 bg-transparent px-4 py-2 text-sm focus:outline-none placeholder:text-white/10 text-white font-light tracking-wide disabled:opacity-50"
+              disabled={isLoading || !isActive}
             />
             <button 
               type="submit"
-              disabled={!inputText.trim() || isLoading}
+              disabled={!inputText.trim() || isLoading || !isActive}
               className={`p-3 rounded-xl transition-all duration-500
                 ${inputText.trim() && !isLoading 
                   ? 'text-blue-400 bg-blue-500/10 shadow-[0_0_15px_rgba(59,130,246,0.2)]' 
