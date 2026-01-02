@@ -17,21 +17,14 @@ def init_engine(echo: bool = False) -> Optional[Engine]:
     """Initialize the SQLAlchemy engine and session factory."""
     global _engine, _SessionLocal
     database_url = (get_database_url() or "").strip()
+    redacted_url = "None"
     
     if not database_url:
         logger.warning("No database URL provided.")
         return None
-    if "@" in database_url and "://" in database_url:
-        try:
-            from sqlalchemy.engine.url import make_url
-            url = make_url(database_url)
-            redacted_url = f"{url.drivername}://{url.username}:***@{url.host}{':' + str(url.port) if url.port else ''}/{url.database}"
-        except Exception:
-            # Fallback if make_url fails
-            prefix, rest = database_url.split("://", 1)
-            if "@" in rest:
-                auth, host = rest.split("@", 1)
-                redacted_url = f"{prefix}://***:***@{host}"
+    
+    # Redact password for logging
+    redacted_url = database_url
     
     logger.info("Initializing database engine with URL: %s", redacted_url)
     
