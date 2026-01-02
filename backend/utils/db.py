@@ -23,14 +23,32 @@ def init_engine(echo: bool = False) -> Optional[Engine]:
         logger.warning("No database URL provided.")
         return None
     
+    # Pre-clean URL for SQLAlchemy
+    if "channel_binding=" in database_url:
+        logger.info("Removing channel_binding from URL for compatibility")
+        import re
+        database_url = re.sub(r'[?&]channel_binding=[^&]*', '', database_url)
+        # Ensure if we removed the only param, we don't leave a trailing ?
+        database_url = database_url.rstrip('?')
+
     # Redact password for logging
     redacted_url = database_url
+    if "@" in database_url and "://" in database_url:
+        try:
+            from sqlalchemy.engine.url import make_url
+            url = make_url(database_url)
+            redacted_url = f"{url.drivername}://{url.username}:***@{url.host}{':' + str(url.port) if url.port else ''}/{url.database}"
+        except Exception:
+            # Fallback if make_url fails
+            prefix, rest = database_url.split("://", 1)
+            if "@" in rest:
+                auth, host = rest.split("@", 1)
+                redacted_url = f"{prefix}://***:***@{host}"
     
     logger.info("Initializing database engine with URL: %s", redacted_url)
     
     try:
         if "postgresql" in database_url:
-            # Handle possible multiple @ in URL (sometimes in passwords)
             _engine = create_engine(
                 database_url, echo=echo, connect_args={"connect_timeout": 10}
             )

@@ -58,12 +58,13 @@ class GeminiProvider(LLMProvider):
         
         if project_id:
             try:
-                logger.info(f"Attempting to initialize Gemini via Vertex AI (Project: {project_id})")
                 creds = get_credentials()
                 
-                # Check if we actually got credentials and if the file path (if any) exists
-                creds_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
-                if creds or (creds_path and os.path.exists(creds_path)):
+                # Only attempt Vertex AI if we have real service account credentials
+                # google.auth.default() can hang on non-GCP environments
+                from google.oauth2 import service_account
+                if isinstance(creds, service_account.Credentials):
+                    logger.info(f"Attempting to initialize Gemini via Vertex AI (Project: {project_id})")
                     self.client = genai.Client(
                         vertexai=True,
                         project=project_id,
@@ -72,9 +73,9 @@ class GeminiProvider(LLMProvider):
                     )
                     logger.info("Vertex AI initialization successful")
                 else:
-                    logger.warning("No valid credentials for Vertex AI found, will fallback to AI Studio")
+                    logger.warning("No Service Account credentials found, skipping Vertex AI to avoid hangs.")
             except Exception as e:
-                logger.error(f"Vertex AI initialization failed, falling back to AI Studio: {e}")
+                logger.error(f"Vertex AI initialization skipped: {e}")
         
         if not self.client:
             logger.info("Initializing Gemini via Google AI Studio")
