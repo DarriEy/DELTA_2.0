@@ -2,14 +2,6 @@
 import logging
 from typing import Any, Dict, List, Optional, Union
 
-import httpx
-import google.auth.transport.requests
-
-try:
-    import vertexai
-except ImportError:  # pragma: no cover - optional dependency
-    vertexai = None
-
 from utils.config import get_settings
 from utils.google_utils import get_credentials
 from utils.prompts import DELTA_SYSTEM_PROMPT, EDUCATIONAL_GUIDE_PROMPT
@@ -17,41 +9,13 @@ from ..llm_providers import get_llm_provider
 
 logger = logging.getLogger(__name__)
 
-
 class LLMService:
     def __init__(self) -> None:
-        self._vertex_ready = False
         self._provider = None
 
-    @property
-    def vertex_ready(self) -> bool:
-        return self._vertex_ready
-
     def init_vertex(self) -> bool:
-        settings = get_settings()
-        if not vertexai:
-            logger.warning("vertexai is not installed. Vertex AI init skipped.")
-            self._vertex_ready = False
-            return False
-
-        try:
-            creds = get_credentials()
-            if creds:
-                vertexai.init(
-                    project=settings.project_id,
-                    location=settings.location,
-                    credentials=creds,
-                )
-                logger.info("Vertex AI initialized with project %s", settings.project_id)
-                self._vertex_ready = True
-                return True
-            logger.warning("No Google credentials found for Vertex AI.")
-            self._vertex_ready = False
-            return False
-        except Exception as exc:
-            logger.error("Vertex AI init failed: %s", exc)
-            self._vertex_ready = False
-            return False
+        # No-op for streamlined stateless mode unless explicitly needed
+        return True
 
     def _get_provider(self):
         if self._provider is None:
@@ -70,7 +34,6 @@ class LLMService:
         )
         provider = self._get_provider()
 
-        # Tools omitted for simplified stateless mode
         if hasattr(provider, "generate_response_with_history"):
             return await provider.generate_response_with_history(
                 user_input,
@@ -116,9 +79,7 @@ class LLMService:
             prompt, "You are a professional hydrological research summarizer."
         )
 
-
 _SERVICE: Optional[LLMService] = None
-
 
 def get_llm_service() -> LLMService:
     global _SERVICE
