@@ -140,7 +140,9 @@ export const apiClient = {
 
       for (const line of lines) {
         if (line.startsWith('data: ')) {
-          const content = line.slice(6);
+          let content = line.slice(6);
+          // Unescape literal \n provided by backend
+          content = content.replace(/\\n/g, '\n');
           result += content;
           if (onChunk) onChunk(content);
         }

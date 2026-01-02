@@ -26,18 +26,23 @@ class ChatService:
         log.info("Starting stateless stream for conversation %s", conversation_id)
         
         full_response = ""
-        log.info("Requesting LLM stream...")
+        log.info("Requesting LLM stream for input: %s", user_input[:50] + "..." if len(user_input) > 50 else user_input)
         try:
+            # We use an explicit history=[] for now to maintain statelessness
             async for chunk in self.llm_service.generate_stream(user_input, history=[]):
                 if chunk:
+                    log.debug("Received chunk: %s", repr(chunk))
                     full_response += chunk
+                    # Split by newline and append literal \n to keep them through the stream
                     lines = chunk.split('\n')
                     for i, line in enumerate(lines):
                         nl = '\\n' if i < len(lines) - 1 else ''
                         yield f"data: {line}{nl}\n\n"
+            
+            log.info("Stream completed successfully for conversation %s", conversation_id)
         except Exception as e:
-            log.error("LLM Stream Error: %s", e)
-            yield f"data: Error: LLM stream failed\n\n"
+            log.error("LLM Stream Error: %s", e, exc_info=True)
+            yield f"data: Error: LLM stream failed - {str(e)}\n\n"
             return
 
     async def get_conversation_summary(self, db: Optional[Any], conversation_id: int) -> Optional[str]:

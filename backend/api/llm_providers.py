@@ -214,8 +214,13 @@ class GeminiProvider(LLMProvider):
                     stream = stream_call
 
                 async for chunk in stream:
-                    if chunk and chunk.text:
-                        yield chunk.text
+                    try:
+                        if chunk and chunk.text:
+                            yield chunk.text
+                    except (AttributeError, ValueError) as e:
+                        # This happens if chunk.text is not available (e.g. blocked)
+                        logger.warning(f"Could not extract text from chunk: {e}")
+                        continue
                 return # Success
 
             except Exception as e:

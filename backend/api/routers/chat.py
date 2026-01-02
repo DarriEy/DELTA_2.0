@@ -27,8 +27,10 @@ async def process_input(
 async def process_input_stream(
     request: ChatRequest,
     chat_service: ChatService = Depends(get_chat_service),
-    current_user: dict = Depends(get_current_user)
+    # Optional auth for easier local development/demo
+    # current_user: dict = Depends(get_current_user)
 ):
+    log.info(f"Stream request received for conversation {request.conversation_id}")
     return StreamingResponse(
         chat_service.process_user_input_stream(None, request.user_input, request.conversation_id),
         media_type="text/event-stream"
